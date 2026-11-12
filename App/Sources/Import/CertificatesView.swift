@@ -18,9 +18,16 @@ struct CertificatesView: View {
                 subtitle: "Importa tu .p12 y el perfil .mobileprovision.",
                 accessory: { headerChip }) {
             certCard.rise(2)
-            DropCard(title: "Importar certificado", hint: "solo .p12") { picking = .certificate }.rise(3)
+            // Import cards only show when nothing is imported yet; delete the file (trash) to import another.
+            if (store.names[.certificate] ?? []).isEmpty {
+                DropCard(title: "Importar certificado", hint: "solo .p12") { picking = .certificate }
+                    .rise(3).transition(.opacity)
+            }
             profileCard.rise(4)
-            DropCard(title: "Importar perfil", hint: "solo .mobileprovision") { picking = .profile }.rise(5)
+            if (store.names[.profile] ?? []).isEmpty {
+                DropCard(title: "Importar perfil", hint: "solo .mobileprovision") { picking = .profile }
+                    .rise(5).transition(.opacity)
+            }
         }
         .importPicker($picking)
         .onAppear {
