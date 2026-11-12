@@ -151,3 +151,77 @@ final class InstallTests: XCTestCase {
     }
     func testDefaultMode() { XCTAssertEqual(InstallConfig().mode, .semiLocal) }
 }
+
+final class ProvisioningProfileTests: XCTestCase {
+    // openssl req -x509 -newkey rsa:1024 -nodes -days 365 -subj /CN=test -outform DER
+    // openssl x509 -inform DER -enddate -> Nov 12 01:15:28 2027 GMT (epoch 1825982128)
+    private let certB64 = "MIIB2TCCAUKgAwIBAgIULwK2JMbgF0lh97jXgliF5dIYvHEwDQYJKoZIhvcNAQELBQAwDzENMAsGA1UEAwwEdGVzdDAeFw0yNjExMTIwMTE1MjhaFw0yNzExMTIwMTE1MjhaMA8xDTALBgNVBAMMBHRlc3QwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAOhzv2UJMtwKGBdK6w/rMF5HHQO50oqZULEABTgqXLsWV7c8NgHJv1n2XOfQHXIe9YQ5k3JugVVm17FP5VDtwpFvfeIWJGA+KcpSeM8lcUDgThPv+UD5CneCg0j1GvGo1tKSl8ytfmHcSV3nu8f+6CmEfkvEOo0yrcvmjQWK7E/jAgMBAAGjMjAwMB0GA1UdDgQWBBQ72+ztLK/rh5MprIJavVn6uUYdITAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4GBAJeaA/QX/OMeEen6SEe6PWm0iLqefl1GG6W31idYd9zN55IozHhDm5XyuFW99OtVdbD6Zod0UXdYlPGdpHROxOeKTs0pUvA0Q6xX9pudX9JZfBTTeZg4oevrdZLvTnFigvNPRIpZKWK1792U5TJAcMSnZ0wk4C3oAqsDuM2IGORp"
+    private let exp = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private func makeProfile(appID: String = "TEAM123.chip.*", devices: [String] = ["AAA", "BBB"],
+                             all: Bool = false) throws -> Data {
+        var plist: [String: Any] = [
+            "Name": "My Profile",
+            "TeamName": "Some Team",
+            "TeamIdentifier": ["TEAM123"],
+            "AppIDName": "Wildcard",
+            "ExpirationDate": exp,
+            "CreationDate": exp.addingTimeInterval(-365 * 86_400),
+            "Entitlements": ["application-identifier": appID],
+            "DeveloperCertificates": [Data(base64Encoded: certB64)!],
+        ]
+        if all { plist["ProvisionsAllDevices"] = true } else { plist["ProvisionedDevices"] = devices }
+        let xml = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+        return Data([0x30, 0x82, 0x01, 0xFF, 0x06, 0x09]) + xml + Data([0x00, 0xFF, 0x30, 0x80])
+    }
+
+    func testParse() throws {
+        let p = try ProvisioningProfile(data: makeProfile())
+        XCTAssertEqual(p.name, "My Profile")
+        XCTAssertEqual(p.teamName, "Some Team")
+        XCTAssertEqual(p.teamID, "TEAM123")
+        XCTAssertEqual(p.appIDName, "Wildcard")
+        XCTAssertEqual(p.applicationIdentifier, "chip.*")
+        XCTAssertEqual(p.expirationDate, exp)
+        XCTAssertEqual(p.provisionedDevices, ["AAA", "BBB"])
+        XCTAssertFalse(p.isAllDevices)
+        XCTAssertEqual(p.developerCertificates.count, 1)
+    }
+
+    func testAllDevices() throws {
+        let p = try ProvisioningProfile(data: makeProfile(all: true))
+        XCTAssertTrue(p.isAllDevices)
+        XCTAssertTrue(p.provisionedDevices.isEmpty)
+    }
+
+    func testStatusAndDays() throws {
+        let p = try ProvisioningProfile(data: makeProfile())
+        XCTAssertEqual(p.status(now: exp.addingTimeInterval(-30 * 86_400)), .valid)
+        XCTAssertEqual(p.status(now: exp.addingTimeInterval(-3 * 86_400)), .expiringSoon)
+        XCTAssertEqual(p.status(now: exp.addingTimeInterval(60)), .expired)
+        XCTAssertEqual(p.daysRemaining(now: exp.addingTimeInterval(-10 * 86_400 - 100)), 10)
+        XCTAssertEqual(p.daysRemaining(now: exp.addingTimeInterval(86_400 + 1)), -2)
+    }
+
+    func testCovers() throws {
+        let wild = try ProvisioningProfile(data: makeProfile())
+        XCTAssertTrue(wild.covers(bundleID: "chip.21"))
+        XCTAssertFalse(wild.covers(bundleID: "other.21"))
+        XCTAssertFalse(wild.covers(bundleID: "chip"))
+        let star = try ProvisioningProfile(data: makeProfile(appID: "TEAM123.*"))
+        XCTAssertTrue(star.covers(bundleID: "anything.at.all"))
+        let exact = try ProvisioningProfile(data: makeProfile(appID: "TEAM123.com.foo.bar"))
+        XCTAssertTrue(exact.covers(bundleID: "com.foo.bar"))
+        XCTAssertFalse(exact.covers(bundleID: "com.foo.baz"))
+    }
+
+    func testNoPlist() {
+        XCTAssertThrowsError(try ProvisioningProfile(data: Data([1, 2, 3, 4])))
+    }
+
+    func testCertificateNotAfter() throws {
+        let der = Data(base64Encoded: certB64)!
+        XCTAssertEqual(certificateNotAfter(der: der), Date(timeIntervalSince1970: 1_825_982_128))
+        XCTAssertNil(certificateNotAfter(der: Data([0x30, 0x03, 0x01, 0x01])))
+    }
+}
