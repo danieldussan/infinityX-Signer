@@ -8,7 +8,7 @@ No hace falta Xcode local. El workflow `.github/workflows/build.yml` corre en un
 
 1. Hace push a `main` (o lanza el workflow a mano desde la pestaña Actions).
 2. El job ejecuta los tests de `Packages/InfinityXCore`, genera el proyecto con XcodeGen (`project.yml`) y compila sin firmar.
-3. Descarga `InfinityXSigner.ipa` desde los artefactos del run. Con un tag `v*` también se publica en un GitHub Release.
+3. Descarga `InfinityXSigner-<versión>.ipa` desde los artefactos del run. Con un tag `v*` (que debe coincidir con `MARKETING_VERSION` de `project.yml`) se publica como `InfinityXSigner-vX.Y.Z.ipa` en un GitHub Release.
 
 El IPA resultante no está firmado: instálalo con tu herramienta de sideload habitual.
 
