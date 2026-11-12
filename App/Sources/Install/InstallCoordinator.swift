@@ -128,7 +128,7 @@ final class InstallCoordinator: ObservableObject {
                 safariTarget = SafariTarget(url: pageURL)
             }
         case .fullyLocal:
-            UIApplication.shared.open(itms)
+            _ = await UIApplication.shared.open(itms)
         case .export:
             break
         }
