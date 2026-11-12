@@ -72,26 +72,15 @@ struct ImportPickerModifier: ViewModifier {
     }
 
     private func handle(_ urls: [URL], kind: ImportKind) {
-        // The temp copy lives in tmp/ until the system cleans it; copying right away on the main actor is safe.
-        Task { @MainActor in
-            guard let url = urls.first else {
-                let msg = "No se recibió ningún archivo."
-                log.add("Importar: \(msg)")
-                toaster.show(msg, isError: true)
-                Haptics.error()
-                return
-            }
-            do {
-                let name = try await store.importFile(from: url, kind: kind)
-                toaster.show("\(kind.importedLabel): \(name)")
-                Haptics.light()
-            } catch {
-                let msg = error.localizedDescription
-                log.add("Importar \(url.lastPathComponent): \(msg)")
-                toaster.show(msg, isError: true)
-                Haptics.error()
-            }
+        // Returns immediately: ImportStore moves/copies the temp file in the background and reports via onFinished.
+        guard let url = urls.first else {
+            let msg = "No se recibió ningún archivo."
+            log.add("Importar: \(msg)")
+            toaster.show(msg, isError: true)
+            Haptics.error()
+            return
         }
+        store.enqueue(url, kind: kind)
     }
 }
 

@@ -7,6 +7,8 @@ struct ContentView: View {
     @EnvironmentObject var library: AppLibrary
     @EnvironmentObject var updater: UpdateChecker
     @EnvironmentObject var toaster: Toaster
+    @EnvironmentObject var imports: ImportStore
+    @EnvironmentObject var log: AppLog
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     // The batch state lives here so it survives tab switches (screens are re-created for the entrance animation).
     @StateObject private var batch = BatchViewModel()
@@ -45,7 +47,11 @@ struct ContentView: View {
             }
             .ignoresSafeArea(.keyboard)
 
-            VStack {
+            VStack(spacing: 0) {
+                if !imports.activeImports.isEmpty {
+                    ImportBanner(jobs: imports.activeImports)
+                        .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                }
                 if updater.bannerVisible, case .available(let version, _, _) = updater.state {
                     UpdateBanner(version: version, onView: {
                         updater.reveal()
@@ -60,6 +66,7 @@ struct ContentView: View {
             }
             .zIndex(8)
             .animation(reduceMotion ? nil : Theme.spring, value: updater.bannerVisible)
+            .animation(reduceMotion ? nil : Theme.spring, value: imports.activeImports.isEmpty)
 
             if batch.showOverlay {
                 ProgressOverlay(vm: batch)
@@ -72,6 +79,16 @@ struct ContentView: View {
         .animation(Theme.spring, value: batch.showOverlay)
         .preferredColorScheme(.dark)
         .task {
+            imports.onFinished = { [weak toaster, weak log] job, result in
+                switch result {
+                case .success(let name):
+                    toaster?.show("\(name) importada")
+                case .failure(let error):
+                    let msg = error.localizedDescription
+                    log?.add("Importar \(job.fileName): \(msg)")
+                    toaster?.show(msg, isError: true)
+                }
+            }
             coordinator.onInstalled = { [weak library] app in
                 library?.markInstalled(fileName: app.ipaURL.lastPathComponent)
             }

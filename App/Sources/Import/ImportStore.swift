@@ -64,6 +64,12 @@ final class ImportStore: ObservableObject {
     @Published private(set) var profileError: String?
     /// App metadata per imported IPA file name (persisted in Application Support/ipa-info.json).
     @Published private(set) var ipaInfo: [String: IPAInfo] = [:]
+    /// Imports in progress or waiting, oldest first (the first one is running).
+    @Published private(set) var activeImports: [ImportJob] = []
+    /// Called on the main actor when a job ends (toast/log live in the UI layer).
+    var onFinished: ((ImportJob, Result<String, Error>) -> Void)?
+    private var pending: [(job: ImportJob, url: URL)] = []
+    private var worker: Task<Void, Never>?
     private var infoInFlight: Set<String> = []
     private var infoFailed: Set<String> = []
     private static var infoFile: URL { AppPaths.appSupport.appendingPathComponent("ipa-info.json") }
@@ -73,6 +79,7 @@ final class ImportStore: ObservableObject {
            let saved = try? JSONDecoder().decode([String: IPAInfo].self, from: data) {
             ipaInfo = saved
         }
+        ImportWorker.removePartials()
         for kind in ImportKind.allCases {
             if let s = UserDefaults.standard.string(forKey: kind.selectionKey) {
                 selection[kind] = s
@@ -147,61 +154,59 @@ final class ImportStore: ObservableObject {
         return AppPaths.imports.appendingPathComponent(name)
     }
 
-    /// Copies the picked file into Documents/Imports (replacing a same-named one), validates it and selects it.
-    @discardableResult
-    func importFile(from url: URL, kind: ImportKind) async throws -> String {
-        // Harmless with asCopy pickers; needed if a security-scoped URL ever arrives.
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard url.pathExtension.lowercased() == kind.rawValue else {
-            throw ImportError.wrongType(kind.rawValue)
+    /// Queues the picked file and returns immediately; the work runs off the main thread, one job at a time.
+    func enqueue(_ url: URL, kind: ImportKind) {
+        let job = ImportJob(id: UUID(), fileName: url.lastPathComponent, kind: kind,
+                            phase: .copying, progress: nil, errorText: nil)
+        activeImports.append(job)
+        pending.append((job, url))
+        guard worker == nil else { return }
+        // ponytail: one serial worker, no per-job cancellation.
+        worker = Task { [weak self] in
+            while let self, !self.pending.isEmpty {
+                let next = self.pending.removeFirst()
+                await self.run(next.job, url: next.url)
+            }
+            self?.worker = nil
         }
-        let size = fileSize(at: url) ?? 0
-        guard size > 0 else { throw ImportError.emptyFile }
-        switch kind {
-        case .profile:
-            guard let data = try? Data(contentsOf: url), (try? ProvisioningProfile(data: data)) != nil else {
-                throw ImportError.invalidProfile
-            }
-        case .ipa:
-            // Header only: IPAs can be hundreds of MB, never load them in memory.
-            let header = (try? FileHandle(forReadingFrom: url)).flatMap { h -> Data? in
-                defer { try? h.close() }
-                return try? h.read(upToCount: 2)
-            }
-            guard let h = header, h.count == 2, h[h.startIndex] == 0x50, h[h.startIndex + 1] == 0x4B else {
-                throw ImportError.notAnIPA
-            }
-        case .certificate:
-            break
+    }
+
+    private func run(_ job: ImportJob, url: URL) async {
+        let id = job.id
+        let kind = job.kind
+        let report: @Sendable (ImportPhase, Double?) -> Void = { [weak self] phase, progress in
+            Task { @MainActor in self?.update(id, phase: phase, progress: progress) }
         }
-        let name = url.lastPathComponent
-        let dest = AppPaths.imports.appendingPathComponent(name)
-        do {
-            if FileManager.default.fileExists(atPath: dest.path) {
-                try FileManager.default.removeItem(at: dest)
+        let result: Result<ImportOutcome, Error> = await Task.detached(priority: .userInitiated) {
+            do { return .success(try ImportWorker.perform(source: url, kind: kind, report: report)) }
+            catch { return .failure(error) }
+        }.value
+        activeImports.removeAll { $0.id == id }
+        switch result {
+        case .success(let outcome):
+            if kind == .ipa {
+                if let info = outcome.info { ipaInfo[outcome.name] = info; saveInfo() }
+                infoFailed.remove(outcome.name)
             }
-            try FileManager.default.copyItem(at: url, to: dest)
-        } catch {
-            throw ImportError.copyFailed(error.localizedDescription)
+            selection[kind] = outcome.name
+            refresh()
+            Haptics.success()
+            onFinished?(job, .success(outcome.name))
+        case .failure(let error):
+            refresh()
+            Haptics.error()
+            onFinished?(job, .failure(error))
         }
-        if kind == .ipa {
-            // Read Info.plist from inside the zip off the main thread; reject IPAs without one.
-            let info = await Task.detached(priority: .userInitiated) { IPAInfoReader.read(at: dest) }.value
-            guard let info else {
-                try? FileManager.default.removeItem(at: dest)
-                ipaInfo[name] = nil
-                saveInfo()
-                refresh()
-                throw ImportError.invalidIPA
-            }
-            infoFailed.remove(name)
-            ipaInfo[name] = info
-            saveInfo()
-        }
-        selection[kind] = name
-        refresh()
-        return name
+    }
+
+    private func update(_ id: UUID, phase: ImportPhase, progress: Double?) {
+        guard let i = activeImports.firstIndex(where: { $0.id == id }) else { return }
+        var job = activeImports[i]
+        // Monotonic within a phase: hops to the main actor may arrive out of order.
+        if phase == job.phase, let old = job.progress, let new = progress { job.progress = max(old, new) }
+        else { job.progress = progress }
+        job.phase = phase
+        if job != activeImports[i] { activeImports[i] = job }
     }
 
     func delete(_ name: String, kind: ImportKind) {
@@ -209,5 +214,139 @@ final class ImportStore: ObservableObject {
         if kind == .certificate { KeychainStore.deletePassword(for: name) }
         if kind == .ipa, ipaInfo.removeValue(forKey: name) != nil { saveInfo() }
         refresh()
+    }
+}
+
+enum ImportPhase: Equatable, Sendable {
+    case copying, reading
+
+    var text: String { self == .copying ? "Copiando…" : "Leyendo información…" }
+}
+
+struct ImportJob: Identifiable, Equatable {
+    let id: UUID
+    let fileName: String
+    let kind: ImportKind
+    var phase: ImportPhase
+    /// 0...1, nil when indeterminate.
+    var progress: Double?
+    var errorText: String?
+}
+
+// @unchecked: IPAInfo is an immutable value type from Core (not declared Sendable there); handed over once.
+struct ImportOutcome: @unchecked Sendable {
+    let name: String
+    let info: IPAInfo?
+}
+
+/// Blocking import work; always call from a background task.
+enum ImportWorker {
+    private static let chunk = 4 * 1024 * 1024
+    private static let partialPrefix = ".partial-"
+
+    /// Partial copies left by a killed app (hidden names, never listed).
+    static func removePartials() {
+        let fm = FileManager.default
+        for n in (try? fm.contentsOfDirectory(atPath: AppPaths.imports.path)) ?? [] where n.hasPrefix(partialPrefix) {
+            try? fm.removeItem(at: AppPaths.imports.appendingPathComponent(n))
+        }
+    }
+
+    static func perform(source: URL, kind: ImportKind,
+                        report: @escaping @Sendable (ImportPhase, Double?) -> Void) throws -> ImportOutcome {
+        let fm = FileManager.default
+        // Harmless with asCopy pickers; needed if a security-scoped URL ever arrives.
+        let scoped = source.startAccessingSecurityScopedResource()
+        defer { if scoped { source.stopAccessingSecurityScopedResource() } }
+        var moved = false
+        // The picker's temp copy is ours: drop it unless it was moved into Imports.
+        defer { if !moved { try? fm.removeItem(at: source) } }
+
+        guard source.pathExtension.lowercased() == kind.rawValue else { throw ImportError.wrongType(kind.rawValue) }
+        let size = ((try? fm.attributesOfItem(atPath: source.path))?[.size] as? NSNumber)?.int64Value ?? 0
+        guard size > 0 else { throw ImportError.emptyFile }
+        var info: IPAInfo?
+        switch kind {
+        case .profile:
+            guard let data = try? Data(contentsOf: source), (try? ProvisioningProfile(data: data)) != nil else {
+                throw ImportError.invalidProfile
+            }
+        case .ipa:
+            // Header only: IPAs can be hundreds of MB, never load them in memory.
+            let header = (try? FileHandle(forReadingFrom: source)).flatMap { h -> Data? in
+                defer { try? h.close() }
+                return try? h.read(upToCount: 2)
+            }
+            guard let h = header, h.count == 2, h[h.startIndex] == 0x50, h[h.startIndex + 1] == 0x4B else {
+                throw ImportError.notAnIPA
+            }
+            // Validate before touching the destination so a bad IPA never replaces a good one.
+            report(.reading, nil)
+            info = IPAInfoReader.read(at: source)
+            guard info != nil else { throw ImportError.invalidIPA }
+        case .certificate:
+            break
+        }
+
+        report(.copying, nil)
+        let name = source.lastPathComponent
+        let dest = AppPaths.imports.appendingPathComponent(name)
+        do {
+            if (try? install(source, to: dest, move: true, size: size, report: report)) == nil {
+                try install(source, to: dest, move: false, size: size, report: report)
+            } else {
+                moved = true
+            }
+        } catch {
+            throw ImportError.copyFailed(error.localizedDescription)
+        }
+        return ImportOutcome(name: name, info: info)
+    }
+
+    /// Move (instant, same volume) or chunked copy to a hidden partial, then swap into place atomically.
+    private static func install(_ source: URL, to dest: URL, move: Bool, size: Int64,
+                                report: @Sendable (ImportPhase, Double?) -> Void) throws {
+        let fm = FileManager.default
+        var staged = source
+        if !move {
+            staged = AppPaths.imports.appendingPathComponent(partialPrefix + UUID().uuidString)
+            do { try chunkedCopy(source, to: staged, size: size, report: report) }
+            catch { try? fm.removeItem(at: staged); throw error }
+        }
+        do {
+            if fm.fileExists(atPath: dest.path) {
+                _ = try fm.replaceItemAt(dest, withItemAt: staged)
+            } else {
+                try fm.moveItem(at: staged, to: dest)
+            }
+        } catch {
+            if !move { try? fm.removeItem(at: staged) }
+            throw error
+        }
+    }
+
+    private static func chunkedCopy(_ source: URL, to dest: URL, size: Int64,
+                                    report: @Sendable (ImportPhase, Double?) -> Void) throws {
+        guard FileManager.default.createFile(atPath: dest.path, contents: nil) else {
+            throw ImportError.copyFailed("no se pudo crear el archivo temporal")
+        }
+        let input = try FileHandle(forReadingFrom: source)
+        let output = try FileHandle(forWritingTo: dest)
+        defer { try? input.close(); try? output.close() }
+        var copied: Int64 = 0
+        var last = DispatchTime.now().uptimeNanoseconds
+        report(.copying, 0)
+        while true {
+            let data = try autoreleasepool { try input.read(upToCount: chunk) }
+            guard let data, !data.isEmpty else { break }
+            try output.write(contentsOf: data)
+            copied += Int64(data.count)
+            let now = DispatchTime.now().uptimeNanoseconds
+            if now - last >= 100_000_000 {  // at most ~10 updates per second
+                last = now
+                report(.copying, min(1, Double(copied) / Double(size)))
+            }
+        }
+        report(.copying, 1)
     }
 }
