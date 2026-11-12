@@ -7,6 +7,8 @@ struct ImportFileRow: View {
     let meta: String
     let icon: String
     var green = false
+    /// Replaces the file name as the bold title (e.g. the app name read from an IPA).
+    var title: String?
     @EnvironmentObject var store: ImportStore
 
     var body: some View {
@@ -19,8 +21,11 @@ struct ImportFileRow: View {
                 HStack(spacing: 12) {
                     IconBox(systemName: icon, green: green)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(name).font(Theme.name).foregroundColor(Theme.text).lineLimit(1).truncationMode(.middle)
+                        Text(title ?? name).font(Theme.name).foregroundColor(Theme.text).lineLimit(1).truncationMode(.middle)
                         Text(meta).font(Theme.meta).foregroundColor(Theme.text2).lineLimit(2)
+                        if let title, title != name {
+                            Text(name).font(Theme.caption).foregroundColor(Theme.text3).lineLimit(1).truncationMode(.middle)
+                        }
                     }
                     Spacer(minLength: 0)
                     SelectDot(on: selected)

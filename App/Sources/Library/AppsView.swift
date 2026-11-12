@@ -1,4 +1,5 @@
 import SwiftUI
+import InfinityXCore
 
 /// "Apps" tab: Importadas | Firmadas | Instaladas.
 struct AppsView: View {
@@ -49,14 +50,24 @@ struct AppsView: View {
                     EmptyStateView(systemName: "shippingbox.fill", text: "Importa una IPA para empezar.")
                 } else {
                     ForEach(names, id: \.self) { name in
-                        // ponytail: size only, no version (reading Info.plist would mean unzipping every IPA).
-                        ImportFileRow(kind: .ipa, name: name, meta: store.fileSize(name).map { Fmt.size($0) } ?? "IPA",
-                                      icon: "shippingbox.fill", green: true)
+                        let info = store.ipaInfo[name]
+                        let size = store.fileSize(name).map { Fmt.size($0) }
+                        ImportFileRow(kind: .ipa, name: name, meta: ipaMeta(info, size: size),
+                                      icon: "shippingbox.fill", green: true, title: info?.displayName)
+                            .onAppear { store.loadInfoIfNeeded(name) }
                     }
                 }
             }
         }
         DropCard(title: "Importar IPA", hint: "solo .ipa") { picking = .ipa }
+    }
+
+    private func ipaMeta(_ info: IPAInfo?, size: String?) -> String {
+        guard let info else { return size ?? "IPA" }
+        var parts = [info.bundleID]
+        if !info.version.isEmpty { parts.append("v" + info.version) }
+        if let size { parts.append(size) }
+        return parts.joined(separator: " · ")
     }
 
     // MARK: Firmadas

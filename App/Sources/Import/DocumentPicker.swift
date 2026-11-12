@@ -82,7 +82,7 @@ struct ImportPickerModifier: ViewModifier {
                 return
             }
             do {
-                let name = try store.importFile(from: url, kind: kind)
+                let name = try await store.importFile(from: url, kind: kind)
                 toaster.show("\(kind.importedLabel): \(name)")
                 Haptics.light()
             } catch {

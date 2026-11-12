@@ -39,6 +39,7 @@ enum ImportError: LocalizedError {
     case emptyFile
     case invalidProfile
     case notAnIPA
+    case invalidIPA
     case copyFailed(String)
 
     var errorDescription: String? {
@@ -47,6 +48,7 @@ enum ImportError: LocalizedError {
         case .emptyFile: return "El archivo está vacío."
         case .invalidProfile: return "El perfil no es válido (no se pudo leer su contenido)."
         case .notAnIPA: return "El archivo no es un IPA válido (no es un zip)."
+        case .invalidIPA: return "La IPA no es válida: no se encontró Info.plist"
         case .copyFailed(let m): return "No se pudo copiar el archivo: \(m)"
         }
     }
@@ -60,8 +62,17 @@ final class ImportStore: ObservableObject {
     /// Parsed selected .mobileprovision (nil when none selected or unreadable).
     @Published private(set) var profile: ProvisioningProfile?
     @Published private(set) var profileError: String?
+    /// App metadata per imported IPA file name (persisted in Application Support/ipa-info.json).
+    @Published private(set) var ipaInfo: [String: IPAInfo] = [:]
+    private var infoInFlight: Set<String> = []
+    private var infoFailed: Set<String> = []
+    private static var infoFile: URL { AppPaths.appSupport.appendingPathComponent("ipa-info.json") }
 
     init() {
+        if let data = try? Data(contentsOf: Self.infoFile),
+           let saved = try? JSONDecoder().decode([String: IPAInfo].self, from: data) {
+            ipaInfo = saved
+        }
         for kind in ImportKind.allCases {
             if let s = UserDefaults.standard.string(forKey: kind.selectionKey) {
                 selection[kind] = s
@@ -102,6 +113,27 @@ final class ImportStore: ObservableObject {
         return (attrs?[.size] as? NSNumber)?.int64Value
     }
 
+    private func saveInfo() {
+        if let data = try? JSONEncoder().encode(ipaInfo) { try? data.write(to: Self.infoFile, options: .atomic) }
+    }
+
+    /// Lazily reads metadata of IPAs imported before it was stored. Zip work runs in the background.
+    func loadInfoIfNeeded(_ name: String) {
+        guard ipaInfo[name] == nil, !infoInFlight.contains(name), !infoFailed.contains(name) else { return }
+        infoInFlight.insert(name)
+        let url = AppPaths.imports.appendingPathComponent(name)
+        Task {
+            let info = await Task.detached(priority: .utility) { IPAInfoReader.read(at: url) }.value
+            infoInFlight.remove(name)
+            if let info, FileManager.default.fileExists(atPath: url.path) {
+                ipaInfo[name] = info
+                saveInfo()
+            } else {
+                infoFailed.insert(name)
+            }
+        }
+    }
+
     func selectedName(_ kind: ImportKind) -> String? { selection[kind] }
 
     func select(_ name: String, kind: ImportKind) {
@@ -117,7 +149,7 @@ final class ImportStore: ObservableObject {
 
     /// Copies the picked file into Documents/Imports (replacing a same-named one), validates it and selects it.
     @discardableResult
-    func importFile(from url: URL, kind: ImportKind) throws -> String {
+    func importFile(from url: URL, kind: ImportKind) async throws -> String {
         // Harmless with asCopy pickers; needed if a security-scoped URL ever arrives.
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -153,6 +185,20 @@ final class ImportStore: ObservableObject {
         } catch {
             throw ImportError.copyFailed(error.localizedDescription)
         }
+        if kind == .ipa {
+            // Read Info.plist from inside the zip off the main thread; reject IPAs without one.
+            let info = await Task.detached(priority: .userInitiated) { IPAInfoReader.read(at: dest) }.value
+            guard let info else {
+                try? FileManager.default.removeItem(at: dest)
+                ipaInfo[name] = nil
+                saveInfo()
+                refresh()
+                throw ImportError.invalidIPA
+            }
+            infoFailed.remove(name)
+            ipaInfo[name] = info
+            saveInfo()
+        }
         selection[kind] = name
         refresh()
         return name
@@ -161,6 +207,7 @@ final class ImportStore: ObservableObject {
     func delete(_ name: String, kind: ImportKind) {
         try? FileManager.default.removeItem(at: AppPaths.imports.appendingPathComponent(name))
         if kind == .certificate { KeychainStore.deletePassword(for: name) }
+        if kind == .ipa, ipaInfo.removeValue(forKey: name) != nil { saveInfo() }
         refresh()
     }
 }
