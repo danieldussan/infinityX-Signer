@@ -225,3 +225,24 @@ final class ProvisioningProfileTests: XCTestCase {
         XCTAssertNil(certificateNotAfter(der: Data([0x30, 0x03, 0x01, 0x01])))
     }
 }
+
+final class VersionTests: XCTestCase {
+    func testNewer() {
+        XCTAssertTrue(isNewerVersion(remote: "v0.3.0", local: "0.2.2"))
+        XCTAssertTrue(isNewerVersion(remote: "v0.10.0", local: "0.9.9"))
+        XCTAssertTrue(isNewerVersion(remote: "1.0.1", local: "1.0"))
+        XCTAssertTrue(isNewerVersion(remote: "0.3.0", local: "0.3.0-beta"))
+    }
+    func testNotNewer() {
+        XCTAssertFalse(isNewerVersion(remote: "0.2.2", local: "0.2.2"))
+        XCTAssertFalse(isNewerVersion(remote: "1.0", local: "1.0.0"))
+        XCTAssertFalse(isNewerVersion(remote: "0.2.1", local: "0.2.2"))
+        XCTAssertFalse(isNewerVersion(remote: "0.3.0-beta", local: "0.3.0"))
+    }
+    func testGarbage() {
+        XCTAssertFalse(isNewerVersion(remote: "latest", local: "0.2.2"))
+        XCTAssertFalse(isNewerVersion(remote: "", local: "0.2.2"))
+        XCTAssertFalse(isNewerVersion(remote: "v1.x", local: "0.2.2"))
+        XCTAssertFalse(isNewerVersion(remote: "1.0.0", local: "abc"))
+    }
+}

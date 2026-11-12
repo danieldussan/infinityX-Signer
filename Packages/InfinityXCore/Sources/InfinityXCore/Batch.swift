@@ -22,6 +22,13 @@ public struct SigningJob: Equatable {
     public var displayName: String
     public var bundleID: String
     public var outputFileName: String
+
+    public init(number: Int, displayName: String, bundleID: String, outputFileName: String) {
+        self.number = number
+        self.displayName = displayName
+        self.bundleID = bundleID
+        self.outputFileName = outputFileName
+    }
 }
 
 /// `numbersText` and `count` are exclusive. With neither: next 1 after `lastUsed`.
