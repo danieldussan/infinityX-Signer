@@ -18,10 +18,13 @@ enum P12Inspector {
         guard let data = try? Data(contentsOf: url), !data.isEmpty else {
             return .unreadable("No se pudo leer el archivo .p12")
         }
-        let options: [String: Any] = [
+        var options: [String: Any] = [
             kSecImportExportPassphrase as String: password,
-            kSecImportToMemoryOnly as String: true,
         ]
+        // ponytail: kSecImportToMemoryOnly exists only on iOS 18+; older iOS may keep the imported key in the keychain.
+        if #available(iOS 18.0, *) {
+            options[kSecImportToMemoryOnly as String] = true
+        }
         var items: CFArray?
         let status = SecPKCS12Import(data as CFData, options as CFDictionary, &items)
         if status == errSecAuthFailed { return .wrong }
