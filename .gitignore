@@ -1,0 +1,28 @@
+# secrets / user files
+*.p12
+*.mobileprovision
+*.ipa
+.wab_counter
+.env*
+
+# build
+.build/
+build/
+DerivedData/
+*.xcuserstate
+.swiftpm/
+xcuserdata/
+
+# local cert pack files + scratch (never commit)
+Password.txt
+Please Readme.txt
+必读说明.txt
+wa_tmp/
+__pycache__/
+cert.p12
+perfil.mobileprovision
+
+# XcodeGen output (CI generates it from project.yml)
+*.xcodeproj/
+App/Info.plist
+*.xcworkspace/

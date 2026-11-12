@@ -1,0 +1,56 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test InfinityXCore
+        run: swift test
+        working-directory: Packages/InfinityXCore
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Resolve packages
+        run: xcodebuild -resolvePackageDependencies -project InfinityXSigner.xcodeproj -scheme InfinityXSigner
+
+      - name: Build (unsigned)
+        run: |
+          xcodebuild -project InfinityXSigner.xcodeproj \
+            -scheme InfinityXSigner \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+
+      - name: Package IPA
+        run: |
+          APP=$(ls -d build/Build/Products/Release-iphoneos/*.app | head -n 1)
+          rm -rf ipa && mkdir -p ipa/Payload
+          cp -R "$APP" ipa/Payload/
+          (cd ipa && zip -qry ../InfinityXSigner.ipa Payload)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: InfinityXSigner-ipa
+          path: InfinityXSigner.ipa
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: InfinityXSigner.ipa

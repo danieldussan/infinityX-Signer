@@ -1,0 +1,63 @@
+name: InfinityXSigner
+options:
+  bundleIdPrefix: com.infinityx
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+packages:
+  InfinityXCore:
+    path: Packages/InfinityXCore
+  # Zsign uses unsafeFlags, so it must be pinned by revision (not by version).
+  Zsign:
+    url: https://github.com/khcrysalis/Zsign-Package
+    revision: c4ba9da4283031c07efa03bce42c4b8602d22e73
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation
+    exactVersion: 0.9.20
+targets:
+  InfinityXSigner:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+    dependencies:
+      - package: InfinityXCore
+      - package: Zsign
+        product: Zsign
+      - package: ZIPFoundation
+        product: ZIPFoundation
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.infinityx.signer
+        PRODUCT_NAME: InfinityXSigner
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Infinity X Signer
+        CFBundleName: InfinityXSigner
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundlePackageType: APPL
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIBackgroundModes: [audio]
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        NSLocalNetworkUsageDescription: Infinity X Signer sirve el IPA firmado en tu propio dispositivo para instalarlo.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+          NSAllowsLocalNetworking: true
