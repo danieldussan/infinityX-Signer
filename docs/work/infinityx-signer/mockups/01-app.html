@@ -302,7 +302,7 @@ function parse(t) {
     nums.forEach(n => out.includes(n) || out.push(n));
   } if (!out.length) throw 0; return out;
 }
-const f2 = n => n < 10 ? "0" + n : "" + n;
+function f2(n) { return n < 10 ? "0" + n : "" + n; }
 function jobs() {
   if (state.mode === "count") return Array.from({ length: state.count }, (_, i) => state.last + 1 + i);
   return parse($("#range").value);

@@ -7,3 +7,4 @@
   - [ ] on-device: batch of 3 sequential installs
   - [ ] on-device: Fully Local + SSL refresh (best effort)
 - [x] 04 Round 2 (untested, no local compile): Feather-style document picker import, ProvisioningProfile parser in Core (22 tests green), cert/profile info + password check (SecPKCS12Import), full UI redesign per mockups/01-app.html; awaiting CI compile + on-device check
+- [x] 05 Round: Apps tab (Importadas/Firmadas/Instaladas, AppLibrary in library.json), Ajustes > Acerca de, UpdateChecker (GitHub releases, 1 check/day) + banner + tab badge, `isNewerVersion` in Core (25 tests green); typecheck OK; UI behaviour awaiting on-device check

@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Infinity X Signer – Apps</title>
+<link rel="stylesheet" href="_shared/tokens.css">
+<style>
+  /* Brand tokens (dark only). Map to Theme.swift when implementing. */
+  :root, :root[data-theme] {
+    --x-bg: #000; --x-glass: rgb(255 255 255 / .07); --x-glass-2: rgb(255 255 255 / .11);
+    --x-line: rgb(255 255 255 / .14); --x-text: #fff; --x-text-2: rgb(255 255 255 / .68); --x-text-3: rgb(255 255 255 / .42);
+    --x-blue: #2f7bff; --x-orange: #ff7a2f; --x-green: #25d366; --x-red: #ff5a5f; --x-amber: #ffb02e;
+    --x-r: 22px; --x-spring: cubic-bezier(.2, 1.1, .3, 1);
+    --bg: #0b0b0f; --fg: #fff;
+  }
+  body { display: grid; place-items: center; min-height: 100vh; padding: 24px 0; background: #0b0b0f; }
+
+  /* ---------- phone ---------- */
+  .phone { position: relative; width: 390px; height: 844px; border-radius: 54px; background: var(--x-bg);
+    box-shadow: 0 0 0 10px #17171c, 0 0 0 11px #2b2b33, 0 40px 80px -20px rgb(0 0 0 / .8); overflow: hidden;
+    font-family: -apple-system, "SF Pro Display", "Instrument Sans", system-ui, sans-serif; color: var(--x-text); isolation: isolate; }
+  .island { position: absolute; top: 11px; left: 50%; width: 120px; height: 34px; margin-left: -60px; background: #000; border-radius: 20px; z-index: 50; }
+  .status { position: absolute; top: 14px; left: 34px; right: 34px; display: flex; justify-content: space-between; font-size: 15px; font-weight: 600; z-index: 40; }
+  .flare { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .55; z-index: -1; animation: drift 14s ease-in-out infinite alternate; }
+  .flare.b { width: 340px; height: 340px; background: var(--x-blue); top: -120px; left: -130px; }
+  .flare.o { width: 300px; height: 300px; background: var(--x-orange); bottom: 40px; right: -140px; animation-delay: -6s; opacity: .4; }
+  @keyframes drift { to { transform: translate(40px, 50px) scale(1.15); } }
+  .streak { position: absolute; z-index: -1; height: 2px; width: 280px; top: 150px; left: -60px; transform: rotate(-24deg);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / .8), transparent); filter: blur(1px); opacity: .5; }
+
+  /* ---------- screens ---------- */
+  .screens { position: absolute; inset: 0; }
+  .screen { position: absolute; inset: 0; padding: 62px 18px 120px; overflow-y: auto; scrollbar-width: none;
+    opacity: 0; transform: translateY(14px) scale(.985); pointer-events: none; transition: opacity .35s var(--ease-out), transform .45s var(--x-spring); }
+  .screen::-webkit-scrollbar { display: none; }
+  .screen.on { opacity: 1; transform: none; pointer-events: auto; }
+  .screen.on .rise > * { animation: rise .55s var(--x-spring) both; }
+  .screen.on .rise > *:nth-child(2) { animation-delay: .06s; } .screen.on .rise > *:nth-child(3) { animation-delay: .12s; }
+  .screen.on .rise > *:nth-child(4) { animation-delay: .18s; } .screen.on .rise > *:nth-child(5) { animation-delay: .24s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+
+  .brand { display: flex; align-items: center; justify-content: space-between; margin: 8px 2px 18px; }
+  .logo { font-size: 26px; font-weight: 800; font-style: italic; letter-spacing: -.02em; line-height: 1; }
+  .logo small { display: block; font-size: 11px; font-weight: 600; font-style: normal; letter-spacing: .2em; color: var(--x-text-3); margin-top: 4px; }
+  .logo .x { font-size: 34px; background: linear-gradient(135deg, var(--x-blue), #fff 55%, var(--x-orange)); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: 3px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 99px; background: var(--x-glass); border: 1px solid var(--x-line); color: var(--x-text-2); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--x-green); box-shadow: 0 0 8px var(--x-green); }
+  .dot.off { background: var(--x-text-3); box-shadow: none; }
+  h2.t { font-size: 30px; font-weight: 800; font-style: italic; letter-spacing: -.02em; margin: 0 2px 4px; }
+  .sub { font-size: 14px; color: var(--x-text-2); margin: 0 2px 16px; }
+
+  .glass { background: linear-gradient(160deg, var(--x-glass-2), var(--x-glass)); border: 1px solid var(--x-line); border-radius: var(--x-r);
+    backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4); padding: 16px; margin-bottom: 14px;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .12), 0 18px 40px -22px rgb(0 0 0 / .9); }
+  .label { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--x-text-3); margin-bottom: 8px; display: block; }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .grow { flex: 1; min-width: 0; }
+  .name { font-size: 16px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta { font-size: 12.5px; color: var(--x-text-2); }
+  .ico { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; font-size: 20px; flex: none;
+    background: linear-gradient(135deg, rgb(47 123 255 / .35), rgb(255 122 47 / .25)); border: 1px solid var(--x-line); }
+  .ico.g { background: linear-gradient(135deg, rgb(37 211 102 / .4), rgb(37 211 102 / .1)); }
+
+  input.f { width: 100%; height: 46px; border-radius: 14px; border: 1px solid var(--x-line); background: rgb(0 0 0 / .35); color: #fff;
+    font: 600 16px/1 -apple-system, system-ui, sans-serif; padding: 0 14px; outline: none; transition: border-color .2s, box-shadow .2s; }
+  input.f:focus { border-color: var(--x-blue); box-shadow: 0 0 0 4px rgb(47 123 255 / .25); }
+  input.f.bad { border-color: var(--x-red); box-shadow: 0 0 0 4px rgb(255 90 95 / .2); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .seg { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 4px; border-radius: 14px; background: rgb(0 0 0 / .4); border: 1px solid var(--x-line); }
+  .seg button { position: relative; z-index: 1; height: 36px; border: 0; background: none; color: var(--x-text-2); font: 650 13.5px/1 -apple-system, system-ui, sans-serif; cursor: pointer; transition: color .2s; }
+  .seg button.on { color: #fff; }
+  .seg i { position: absolute; top: 4px; bottom: 4px; left: 4px; border-radius: 10px; background: linear-gradient(135deg, var(--x-blue), #5b3bff); transition: transform .35s var(--x-spring); box-shadow: 0 6px 18px -6px var(--x-blue); }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .tag { font: 650 12.5px/1 ui-monospace, monospace; padding: 8px 10px; border-radius: 10px; background: rgb(255 255 255 / .08); border: 1px solid var(--x-line); animation: pop .35s var(--x-spring) both; }
+  .tag b { color: var(--x-green); font-weight: 700; }
+  @keyframes pop { from { opacity: 0; transform: scale(.7); } }
+  .err { color: var(--x-red); font-size: 13px; margin-top: 8px; display: none; } .err.on { display: block; animation: pop .3s both; }
+
+  .switch { position: relative; width: 52px; height: 32px; border-radius: 99px; background: rgb(255 255 255 / .16); border: 0; cursor: pointer; transition: background .25s; flex: none; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; transition: transform .3s var(--x-spring); box-shadow: 0 2px 6px rgb(0 0 0 / .4); }
+  .switch.on { background: var(--x-green); } .switch.on::after { transform: translateX(20px); }
+
+  .cta { position: relative; width: 100%; height: 58px; border: 0; border-radius: 20px; color: #fff; font: 800 17px/1 -apple-system, system-ui, sans-serif; font-style: italic; letter-spacing: .01em; cursor: pointer; overflow: hidden;
+    background: linear-gradient(110deg, var(--x-blue), #7a4bff 55%, var(--x-orange)); background-size: 160% 100%; box-shadow: 0 14px 36px -10px var(--x-blue), inset 0 1px 0 rgb(255 255 255 / .35);
+    transition: transform .2s var(--x-spring), background-position .6s; }
+  .cta:hover { background-position: 100% 0; } .cta:active { transform: scale(.97); }
+  .cta[disabled] { filter: grayscale(.8) brightness(.6); cursor: not-allowed; }
+  .cta.ghost { background: var(--x-glass-2); box-shadow: none; border: 1px solid var(--x-line); }
+  .btn-s { height: 38px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--x-line); background: var(--x-glass-2); color: #fff; font: 650 13.5px/1 -apple-system, system-ui, sans-serif; cursor: pointer; transition: transform .2s var(--x-spring); }
+  .btn-s:active { transform: scale(.94); }
+
+  .drop { border: 1.5px dashed rgb(255 255 255 / .28); border-radius: var(--x-r); padding: 22px 16px; text-align: center; margin-bottom: 14px; cursor: pointer; transition: border-color .2s, background .2s, transform .3s var(--x-spring); }
+  .drop:hover { border-color: var(--x-blue); background: rgb(47 123 255 / .08); transform: translateY(-2px); }
+  .drop .plus { width: 46px; height: 46px; margin: 0 auto 8px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; background: linear-gradient(135deg, var(--x-blue), var(--x-orange)); }
+  .drop small { display: block; color: var(--x-text-3); font: 600 12px ui-monospace, monospace; margin-top: 4px; }
+
+  /* checklist stepper on Sign */
+  .steps { display: flex; gap: 8px; margin-bottom: 14px; }
+  .step { flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 14px; background: var(--x-glass); border: 1px solid var(--x-line); font-size: 12.5px; font-weight: 650; }
+  .step .c { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; background: var(--x-green); color: #000; flex: none; }
+  .step.miss .c { background: transparent; border: 1.5px solid var(--x-amber); color: var(--x-amber); } .step.miss { border-color: rgb(255 176 46 / .45); }
+
+  /* progress */
+  .overlay { position: absolute; inset: 0; z-index: 30; padding: 62px 18px 40px; background: rgb(0 0 0 / .72); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+    opacity: 0; pointer-events: none; transform: translateY(40px); transition: opacity .35s, transform .5s var(--x-spring); overflow-y: auto; }
+  .overlay.on { opacity: 1; pointer-events: auto; transform: none; }
+  .bar { height: 8px; border-radius: 9px; background: rgb(255 255 255 / .12); overflow: hidden; margin: 12px 0 18px; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: 9px; background: linear-gradient(90deg, var(--x-blue), var(--x-green)); transition: width .5s var(--ease-out); }
+  .job { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 16px; background: var(--x-glass); border: 1px solid var(--x-line); margin-bottom: 9px; animation: rise .5s var(--x-spring) both; }
+  .state { width: 26px; height: 26px; flex: none; display: grid; place-items: center; font-size: 14px; }
+  .ring { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid rgb(255 255 255 / .2); border-top-color: var(--x-blue); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ok { color: var(--x-green); font-size: 20px; animation: pop .4s var(--x-spring); } .bad { color: var(--x-red); font-size: 20px; }
+  .q { width: 10px; height: 10px; border-radius: 50%; background: var(--x-text-3); }
+
+  /* lists */
+  .item { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--x-line); animation: rise .45s var(--x-spring) both; }
+  .item:last-child { border-bottom: 0; }
+  .sel { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--x-text-3); display: grid; place-items: center; font-size: 12px; flex: none; transition: all .25s var(--x-spring); }
+  .sel.on { background: var(--x-green); border-color: var(--x-green); color: #000; transform: scale(1.1); }
+  .empty { text-align: center; padding: 26px 10px; color: var(--x-text-2); font-size: 14px; }
+  .empty .big { font-size: 40px; margin-bottom: 6px; opacity: .9; }
+
+  /* toast */
+  .toast { position: absolute; top: 58px; left: 50%; z-index: 60; padding: 12px 18px; border-radius: 16px; background: rgb(20 22 28 / .92); border: 1px solid var(--x-line); font-weight: 650; font-size: 14px;
+    transform: translate(-50%, -90px); transition: transform .5s var(--x-spring); white-space: nowrap; box-shadow: 0 16px 40px -10px #000; }
+  .toast.on { transform: translate(-50%, 0); }
+
+  /* tab bar */
+  .tabbar { position: absolute; left: 14px; right: 14px; bottom: 22px; height: 70px; z-index: 20; border-radius: 28px; padding: 6px; display: grid; grid-template-columns: repeat(4, 1fr);
+    background: rgb(22 24 30 / .72); border: 1px solid var(--x-line); backdrop-filter: blur(28px) saturate(1.6); -webkit-backdrop-filter: blur(28px) saturate(1.6); box-shadow: 0 20px 40px -14px #000, inset 0 1px 0 rgb(255 255 255 / .14); }
+  .tabbar .pill { position: absolute; top: 6px; bottom: 6px; left: 6px; width: calc((100% - 12px) / 4); border-radius: 22px; background: linear-gradient(135deg, rgb(47 123 255 / .55), rgb(255 122 47 / .35)); border: 1px solid rgb(255 255 255 / .22); transition: transform .45s var(--x-spring); }
+  .tab { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; background: none; color: var(--x-text-2); font: 650 11px/1 -apple-system, system-ui, sans-serif; cursor: pointer; transition: color .2s, transform .3s var(--x-spring); }
+  .tab span { font-size: 21px; line-height: 1; } .tab.on { color: #fff; } .tab.on span { transform: translateY(-1px) scale(1.12); }
+  .home { position: absolute; bottom: 8px; left: 50%; width: 134px; height: 5px; margin-left: -67px; border-radius: 3px; background: rgb(255 255 255 / .85); z-index: 40; }
+
+
+  /* Apps tab */
+  .seg3 button { font-size: 12.5px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+  .seg3 em { font-style: normal; min-width: 18px; padding: 2px 5px; border-radius: 9px; background: rgb(255 255 255 / .14); font-size: 11px; line-height: 1.2; transition: background .25s; }
+  .seg3 button.on em { background: rgb(255 255 255 / .28); }
+  .app { padding: 12px 4px 12px; border-bottom: 1px solid var(--x-line); animation: rise .45s var(--x-spring) both; transition: opacity .3s, transform .35s var(--x-spring), max-height .35s; max-height: 140px; overflow: hidden; }
+  .app:last-child { border-bottom: 0; }
+  .app.out { opacity: 0; transform: translateX(60px); max-height: 0; padding-top: 0; padding-bottom: 0; }
+  .app .acts { display: flex; gap: 8px; margin: 10px 0 0 56px; }
+  .btn-s.pri { background: linear-gradient(135deg, var(--x-blue), #5b3bff); border-color: transparent; }
+  .btn-s.dng { color: var(--x-red); }
+  .pill-s { font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 99px; background: rgb(37 211 102 / .16); color: var(--x-green); white-space: nowrap; }
+  .bulk { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+
+  .links { display: flex; flex-direction: column; border-top: 1px solid var(--x-line); }
+  .link { display: flex; align-items: center; gap: 12px; padding: 12px 2px; color: inherit; text-decoration: none; border-bottom: 1px solid var(--x-line); transition: background .2s, transform .25s var(--x-spring); }
+  .link:last-child { border-bottom: 0; } .link:active { transform: scale(.985); background: rgb(255 255 255 / .05); }
+  .link span { font-size: 20px; width: 28px; text-align: center; } .link b { font-size: 15px; font-weight: 650; display: block; }
+  .link small { color: var(--x-text-2); font-size: 12.5px; } .link i { font-style: normal; color: var(--x-text-3); font-size: 18px; }
+  .upd { margin-top: 12px; padding: 14px; border-radius: 16px; background: linear-gradient(135deg, rgb(47 123 255 / .22), rgb(255 122 47 / .14)); border: 1px solid rgb(255 255 255 / .22); animation: pop .4s var(--x-spring) both; }
+  .upd ul { margin: 8px 0 12px; padding-left: 18px; color: var(--x-text-2); font-size: 13px; line-height: 1.5; }
+  .upd.ok { background: rgb(37 211 102 / .1); border-color: rgb(37 211 102 / .35); }
+
+  .banner { position: absolute; top: 56px; left: 14px; right: 14px; z-index: 55; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 18px;
+    background: linear-gradient(135deg, rgb(47 123 255 / .85), rgb(122 75 255 / .8) 60%, rgb(255 122 47 / .75)); border: 1px solid rgb(255 255 255 / .3);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 16px 36px -12px rgb(47 123 255 / .7);
+    transform: translateY(-130px); opacity: 0; transition: transform .55s var(--x-spring), opacity .35s; font-size: 13.5px; font-weight: 650; }
+  .banner.on { transform: none; opacity: 1; }
+  .banner .grow small { display: block; font-weight: 500; opacity: .85; font-size: 12px; }
+  .banner button { border: 0; border-radius: 12px; height: 32px; padding: 0 12px; font: 700 12.5px/1 -apple-system, system-ui, sans-serif; cursor: pointer; background: rgb(255 255 255 / .95); color: #101014; }
+  .banner button.x { background: rgb(0 0 0 / .25); color: #fff; width: 32px; padding: 0; font-size: 14px; }
+  .tab .badge { position: absolute; top: 8px; left: calc(50% + 8px); width: 9px; height: 9px; border-radius: 50%; background: var(--x-orange); box-shadow: 0 0 8px var(--x-orange); display: none; }
+  .tab .badge.on { display: block; animation: pop .4s var(--x-spring); }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  .note { position: fixed; left: 24px; bottom: 24px; max-width: 280px; font-size: 12.5px; color: #888; line-height: 1.5; }
+  @media (max-width: 760px) { .note { display: none; } }
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+  <div class="flare b"></div><div class="flare o"></div><div class="streak"></div>
+  <div class="island"></div>
+  <div class="status"><span>9:41</span><span>􀙇 100%</span></div>
+  <div class="toast" id="toast"></div>
+  <div class="banner" id="banner" role="status">
+    <span style="font-size:20px">✨</span>
+    <div class="grow">Nueva versión v0.3.0<small>Toca para ver las novedades</small></div>
+    <button id="bnView">Ver</button><button class="x" id="bnClose" aria-label="Cerrar">✕</button>
+  </div>
+
+  <div class="screens">
+    <!-- ============ FIRMAR ============ -->
+    <section class="screen on" id="s-sign" data-tab="2">
+      <div class="rise">
+        <div class="brand">
+          <div class="logo">INFINITY <span class="x">X</span><small>SIGNER</small></div>
+          <span class="chip"><i class="dot"></i> Listo</span>
+        </div>
+        <div>
+          <h2 class="t">Firmar por lotes</h2>
+          <p class="sub">Genera WhatsApps con nombre y bundle consecutivos.</p>
+        </div>
+        <div class="steps" id="steps"></div>
+
+        <div class="glass">
+          <span class="label">Modo</span>
+          <div class="seg" id="modeSeg"><i></i><button class="on" data-m="range">Rango</button><button data-m="count">Siguientes</button></div>
+          <div style="height:12px"></div>
+          <div id="rangeBox">
+            <input class="f" id="range" value="21-25" inputmode="numeric" placeholder="21-25 · 21,23 · 21-23,30" autocomplete="off">
+          </div>
+          <div id="countBox" style="display:none" class="row">
+            <div class="grow"><span class="meta">Último usado: <b>20</b> · Cantidad</span></div>
+            <button class="btn-s" id="minus">−</button><b id="cnt" style="width:30px;text-align:center;font-size:20px">3</b><button class="btn-s" id="plus">+</button>
+          </div>
+          <div class="err" id="rangeErr">Formato inválido. Ejemplo: 21-25 o 21,23</div>
+          <div class="tags" id="tags"></div>
+        </div>
+
+        <div class="glass">
+          <div class="two">
+            <div><span class="label">Prefijo de nombre</span><input class="f" id="np" value="WAB"></div>
+            <div><span class="label">Prefijo de bundle</span><input class="f" id="bp" value="chip"></div>
+          </div>
+          <div class="row" style="margin-top:14px">
+            <div class="grow"><div class="name" style="font-size:15px">Quitar extensiones</div><div class="meta">Elimina PlugIns/Extensions</div></div>
+            <button class="switch" id="strip" aria-label="Quitar extensiones"></button>
+          </div>
+        </div>
+        <button class="cta" id="go">Firmar 5 apps</button>
+      </div>
+    </section>
+
+    <!-- ============ CERTIFICADO ============ -->
+    <section class="screen" id="s-cert" data-tab="0">
+      <div class="rise">
+        <div class="brand"><div class="logo">INFINITY <span class="x">X</span></div><span class="chip" id="certChip"><i class="dot"></i> Válido</span></div>
+        <div><h2 class="t">Certificado</h2><p class="sub">Importa tu .p12 y el perfil .mobileprovision.</p></div>
+        <div class="glass" id="certCard"></div>
+        <div class="drop" id="dropCert"><div class="plus">+</div><b>Importar certificado</b><small>solo .p12</small></div>
+        <div class="glass" id="profCard"></div>
+        <div class="drop" id="dropProf"><div class="plus">+</div><b>Importar perfil</b><small>solo .mobileprovision</small></div>
+      </div>
+    </section>
+
+    <!-- ============ APPS ============ -->
+    <section class="screen" id="s-ipa" data-tab="1">
+      <div class="rise">
+        <div class="brand"><div class="logo">INFINITY <span class="x">X</span></div><span class="chip" id="appsChip"><i class="dot"></i> 0</span></div>
+        <div><h2 class="t">Mis Apps</h2><p class="sub">Importadas, firmadas e instaladas desde la app.</p></div>
+        <div class="seg seg3" id="appSeg"><i></i>
+          <button class="on">Importadas<em id="cImp">1</em></button>
+          <button>Firmadas<em id="cSig">0</em></button>
+          <button>Instaladas<em id="cIns">0</em></button>
+        </div>
+        <div id="appList" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <!-- ============ AJUSTES ============ -->
+    <section class="screen" id="s-set" data-tab="3">
+      <div class="rise">
+        <div class="brand"><div class="logo">INFINITY <span class="x">X</span></div></div>
+        <div><h2 class="t">Ajustes</h2><p class="sub">Instalación, servidor y diagnóstico.</p></div>
+        <div class="glass">
+          <span class="label">Método de instalación</span>
+          <div class="seg" id="instSeg"><i></i><button class="on">Semi Local</button><button>Local</button><button>Exportar</button></div>
+          <p class="meta" id="instHelp" style="margin:10px 2px 0">Recomendado. Sirve el IPA desde tu iPhone y usa un servidor externo solo para el plist.</p>
+        </div>
+        <div class="glass">
+          <span class="label">Servidor del plist</span>
+          <input class="f" value="https://api.palera.in" spellcheck="false">
+        </div>
+        <div class="glass">
+          <div class="row">
+            <div class="ico g">🔒</div>
+            <div class="grow"><div class="name">Certificados SSL</div><div class="meta" id="sslMeta">Válido hasta 12 feb 2027</div></div>
+            <button class="btn-s" id="sslBtn">Actualizar</button>
+          </div>
+        </div>
+        <div class="glass">
+          <div class="row"><div class="grow"><span class="label" style="margin:0">Último consecutivo</span></div><b style="font-size:22px">20</b></div>
+        </div>
+        <div class="glass" id="aboutCard">
+          <span class="label">Acerca de</span>
+          <div class="row" style="margin-bottom:14px">
+            <div class="ico" style="width:52px;height:52px;font-size:26px;font-style:italic;font-weight:800;background:#000">X</div>
+            <div class="grow"><div class="name">Infinity X Signer</div><div class="meta">Versión <b>0.2.2</b> (build 1)</div></div>
+          </div>
+          <div class="row" id="updRow">
+            <div class="grow"><div class="name" style="font-size:15px">Actualizaciones</div><div class="meta" id="updMeta">Consulta las releases de GitHub</div></div>
+            <button class="btn-s" id="updBtn">Buscar</button>
+          </div>
+          <div id="updCard" style="display:none"></div>
+          <div class="links" style="margin-top:12px">
+            <a class="link" href="#" data-url="https://github.com/danieldussan/infinityX-Signer"><span>🧩</span><div class="grow"><b>Código fuente</b><small>github.com/danieldussan/infinityX-Signer</small></div><i>↗</i></a>
+            <a class="link" href="#" data-url="https://github.com/danieldussan/infinityX-Signer/releases"><span>📦</span><div class="grow"><b>Versiones</b><small>Descargas y novedades</small></div><i>↗</i></a>
+            <a class="link" href="#" data-url="https://github.com/danieldussan/infinityX-Signer/issues"><span>🐞</span><div class="grow"><b>Reportar un problema</b><small>Abre un issue en GitHub</small></div><i>↗</i></a>
+          </div>
+          <p class="meta" style="margin:14px 2px 6px">Creada por <b>Tech Hub</b></p>
+          <span class="label" style="margin:12px 0 4px">Créditos y fuentes</span>
+          <div class="links">
+            <a class="link" href="#" data-url="https://github.com/claration/Feather"><span>🪶</span><div class="grow"><b>Feather</b><small>Inspiración del diseño y la instalación · github.com/claration/Feather</small></div><i>↗</i></a>
+            <a class="link" href="#" data-url="https://github.com/khcrysalis/Zsign-Package"><span>✍️</span><div class="grow"><b>Zsign</b><small>Motor de firma · github.com/khcrysalis/Zsign-Package</small></div><i>↗</i></a>
+            <a class="link" href="#" data-url="https://github.com/weichsel/ZIPFoundation"><span>🗜️</span><div class="grow"><b>ZIPFoundation</b><small>Manejo de archivos .ipa · github.com/weichsel/ZIPFoundation</small></div><i>↗</i></a>
+          </div>
+          <p class="meta" style="margin:8px 2px 0;color:var(--x-text-3)">No incluye ninguna IPA ni certificado: traes los tuyos. No está afiliada con Apple ni con WhatsApp.</p>
+        </div>
+
+      </div>
+    </section>
+  </div>
+
+  <!-- progress overlay -->
+  <div class="overlay" id="ov">
+    <div class="brand"><div class="logo">INFINITY <span class="x">X</span></div><span class="chip" id="ovChip">Firmando…</span></div>
+    <h2 class="t" id="ovTitle">Firmando 5 apps</h2>
+    <div class="bar"><i id="bar"></i></div>
+    <div id="jobs"></div>
+    <div id="ovActions" style="display:none;margin-top:12px;display:none;gap:10px;flex-direction:column">
+      <button class="cta" id="installAll">Instalar las 5</button>
+      <button class="cta ghost" id="exportAll">Exportar IPAs</button>
+      <button class="cta ghost" id="closeOv" style="height:48px">Cerrar</button>
+    </div>
+  </div>
+
+  <nav class="tabbar" id="tabbar">
+    <div class="pill" id="pill"></div>
+    <button class="tab" data-i="0"><span>🔑</span>Certificado</button>
+    <button class="tab" data-i="1"><span>📦</span>Apps</button>
+    <button class="tab on" data-i="2"><span>✦</span>Firmar</button>
+    <button class="tab" data-i="3"><span>⚙️</span>Ajustes<i class="badge" id="setBadge"></i></button>
+  </nav>
+  <div class="home"></div>
+</div>
+
+<p class="note">Mockup interactivo (solo oscuro). Prueba: cambiar de pestaña, escribir un rango, "Siguientes", importar cert/perfil/IPA, y firmar. El selector de archivos real es el del sistema, filtrado por extensión.</p>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const state = { cert: { name: "Dussan-Dev.p12", exp: "14 ago 2027", pw: true }, prof: { name: "perfil.mobileprovision", exp: "14 ago 2027", app: "chip.*" }, ipa: { name: "WA.ipa", ver: "2.24.18", mb: 312 }, mode: "range", count: 3, last: 20 };
+let busy = false;
+
+/* tabs */
+const screens = $$(".screen"), tabs = $$(".tab");
+function go(i) {
+  tabs.forEach((t, k) => t.classList.toggle("on", k === i));
+  $("#pill").style.transform = `translateX(${i * 100}%)`;
+  screens.forEach(s => s.classList.toggle("on", +s.dataset.tab === i));
+  if (navigator.vibrate) navigator.vibrate(8);
+}
+tabs.forEach(t => t.onclick = () => go(+t.dataset.i));
+go(2);
+
+/* segmented controls */
+function seg(el, cb) {
+  const btns = $$("button", el), ind = $("i", el);
+  const set = k => { btns.forEach((b, j) => b.classList.toggle("on", j === k)); ind.style.width = `calc((100% - 8px) / ${btns.length})`; ind.style.transform = `translateX(${k * 100}%)`; cb && cb(k, btns[k]); };
+  btns.forEach((b, k) => b.onclick = () => set(k)); set(0);
+}
+seg($("#modeSeg"), (k) => { state.mode = k ? "count" : "range"; $("#rangeBox").style.display = k ? "none" : ""; $("#countBox").style.display = k ? "flex" : "none"; render(); });
+const help = ["Recomendado. Sirve el IPA desde tu iPhone y usa un servidor externo solo para el plist.", "Servidor HTTPS en el iPhone con certificado SSL. Experimental: puede fallar en iOS 18.", "No instala. Comparte el .ipa firmado para usarlo con otra herramienta."];
+seg($("#instSeg"), k => { $("#instHelp").textContent = help[k]; });
+
+/* batch logic (mirrors InfinityXCore.parseNumbers) */
+function parse(t) {
+  const out = []; for (const p of t.replace(/\s/g, "").split(",").filter(Boolean)) {
+    let nums;
+    if (p.includes("-")) { const [a, b] = p.split("-").map(Number); if (!(a >= 0 && b >= a) || p.split("-").length !== 2) throw 0; nums = Array.from({ length: b - a + 1 }, (_, i) => a + i); }
+    else { if (!/^\d+$/.test(p)) throw 0; nums = [+p]; }
+    nums.forEach(n => out.includes(n) || out.push(n));
+  } if (!out.length) throw 0; return out;
+}
+function f2(n) { return n < 10 ? "0" + n : "" + n; }
+function jobs() {
+  if (state.mode === "count") return Array.from({ length: state.count }, (_, i) => state.last + 1 + i);
+  return parse($("#range").value);
+}
+function ready() { return state.cert && state.prof && state.ipa; }
+function render() {
+  const np = $("#np").value || "WAB", bp = $("#bp").value || "chip";
+  let list = [], bad = false;
+  if (state.mode === "range" && !$("#range").value.trim()) { list = []; } else { try { list = jobs(); } catch { bad = true; } }
+  $("#range").classList.toggle("bad", bad); $("#rangeErr").classList.toggle("on", bad);
+  const shown = list.slice(0, 8);
+  $("#tags").innerHTML = shown.map(n => `<span class="tag">${np} ${f2(n)} <b>·</b> ${bp}.${f2(n)}</span>`).join("") + (list.length > 8 ? `<span class="tag">+${list.length - 8} más</span>` : "");
+  const go_ = $("#go"); go_.textContent = !ready() ? "Falta importar archivos" : bad ? "Revisa el rango" : !list.length ? "Escribe un rango" : `Firmar ${list.length} app${list.length === 1 ? "" : "s"}`;
+  go_.disabled = bad || !ready() || !list.length; go_._list = list;
+  $("#steps").innerHTML = [["cert", "Cert"], ["prof", "Perfil"], ["ipa", "IPA"]].map(([k, l]) => `<div class="step ${state[k] ? "" : "miss"}"><span class="c">${state[k] ? "✓" : "!"}</span>${l}</div>`).join("");
+}
+["#range", "#np", "#bp"].forEach(s => $(s).oninput = render);
+$("#minus").onclick = () => { state.count = Math.max(1, state.count - 1); $("#cnt").textContent = state.count; render(); };
+$("#plus").onclick = () => { state.count = Math.min(30, state.count + 1); $("#cnt").textContent = state.count; render(); };
+$("#strip").onclick = e => e.currentTarget.classList.toggle("on");
+
+/* import cards */
+function renderFiles() {
+  const c = state.cert, p = state.prof, i = state.ipa;
+  $("#certCard").innerHTML = c ? `<div class="item"><div class="ico">🔑</div><div class="grow"><div class="name">${c.name}</div><div class="meta">Vence ${c.exp}</div></div><span class="sel on">✓</span></div>
+    <span class="label" style="margin-top:12px">Contraseña del .p12</span><div class="row"><input class="f" type="password" value="••••••••" id="pw"><button class="btn-s" id="eye">Ver</button></div>
+    <div class="meta" style="margin-top:8px">Se guarda en el Keychain de tu iPhone.</div>` : `<div class="empty"><div class="big">🔑</div>Aún no hay certificado.</div>`;
+  $("#profCard").innerHTML = p ? `<div class="item"><div class="ico g">📄</div><div class="grow"><div class="name">${p.name}</div><div class="meta">App ID ${p.app} · vence ${p.exp}</div></div><span class="sel on">✓</span></div>` : `<div class="empty"><div class="big">📄</div>Aún no hay perfil.</div>`;
+  const eye = $("#eye"); if (eye) eye.onclick = () => { const pw = $("#pw"); const show = pw.type === "password"; pw.type = show ? "text" : "password"; pw.value = show ? "mi-clave-p12" : "••••••••"; eye.textContent = show ? "Ocultar" : "Ver"; };
+  $("#certChip").innerHTML = `<i class="dot ${c ? "" : "off"}"></i> ${c ? "Válido" : "Falta"}`;
+  render();
+}
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2200); }
+$("#dropCert").onclick = () => { state.cert = { name: "Dussan-Dev.p12", exp: "14 ago 2027" }; renderFiles(); toast("✓ Certificado importado"); };
+$("#dropProf").onclick = () => { state.prof = { name: "perfil.mobileprovision", exp: "14 ago 2027", app: "chip.*" }; renderFiles(); toast("✓ Perfil importado"); };
+$("#sslBtn").onclick = e => { const b = e.currentTarget; b.innerHTML = '<span class="ring" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:-2px"></span>'; setTimeout(() => { b.textContent = "Actualizar"; $("#sslMeta").textContent = "Válido hasta 02 may 2027"; toast("✓ Certificados SSL actualizados"); }, 1300); };
+
+/* signing simulation */
+$("#go").onclick = async () => {
+  if (busy) return; busy = true;
+  const list = $("#go")._list, np = $("#np").value || "WAB", bp = $("#bp").value || "chip";
+  $("#ov").classList.add("on"); $("#ovTitle").textContent = `Firmando ${list.length} app${list.length === 1 ? "" : "s"}`; $("#ovChip").textContent = "Firmando…";
+  $("#ovActions").style.display = "none"; $("#bar").style.width = "0";
+  $("#jobs").innerHTML = list.map(n => `<div class="job" id="j${n}"><div class="state"><span class="q"></span></div><div class="grow"><div class="name">${np} ${f2(n)}</div><div class="meta">${bp}.${f2(n)} · en cola</div></div></div>`).join("");
+  let done = 0;
+  for (const n of list) {
+    const el = $("#j" + n); el.querySelector(".state").innerHTML = '<span class="ring"></span>'; el.querySelector(".meta").textContent = `${bp}.${f2(n)} · firmando…`;
+    await new Promise(r => setTimeout(r, 900 + Math.random() * 500));
+    const fail = list.length > 3 && n === list[2];
+    el.querySelector(".state").innerHTML = fail ? '<span class="bad">✕</span>' : '<span class="ok">✓</span>';
+    el.querySelector(".meta").textContent = fail ? "Falló: el perfil no cubre este bundle id" : `${bp}.${f2(n)} · firmada`;
+    done++; $("#bar").style.width = `${done / list.length * 100}%`;
+  }
+  $("#ovChip").textContent = "Listo"; $("#ovTitle").textContent = "¡Firmado!"; addSigned(list.filter((n, i) => !(list.length > 3 && i === 2)), np, bp);
+  $("#closeOv").textContent = "Cerrar"; $("#installAll").style.display = ""; $("#exportAll").style.display = "";
+  $("#installAll").textContent = `Instalar ${list.length > 3 ? list.length - 1 : list.length}`; $("#ovActions").style.display = "flex"; busy = false;
+};
+$("#closeOv").onclick = () => {
+  $("#ov").classList.remove("on");
+  const had = apps.signed.length;
+  $("#range").value = ""; render();
+  if (had && !$("#closeOv")._installed) { toast("✓ Guardadas en Apps › Firmadas"); }
+  $("#closeOv")._installed = false;
+};
+$("#installAll").onclick = async () => {
+  const rows = $$("#jobs .job").filter(r => r.querySelector(".ok"));
+  $("#installAll").style.display = "none"; $("#exportAll").style.display = "none"; $("#ovChip").textContent = "Instalando…";
+  for (const r of rows) {
+    r.querySelector(".state").innerHTML = '<span class="ring"></span>'; r.querySelector(".meta").textContent = r.querySelector(".meta").textContent.replace(/·.*/, "· instalando…");
+    await new Promise(t => setTimeout(t, 900));
+    r.querySelector(".state").innerHTML = '<span class="ok">✓</span>'; r.querySelector(".meta").textContent = r.querySelector(".meta").textContent.replace(/·.*/, "· instalada");
+    const nm = r.querySelector(".name").textContent; const i = apps.signed.findIndex(a => a.name === nm);
+    if (i >= 0) apps.installed.unshift({ ...apps.signed.splice(i, 1)[0], when: "ahora" });
+    renderApps();
+  }
+  $("#ovChip").textContent = "Listo"; $("#closeOv").textContent = "Listo"; $("#closeOv")._installed = true; toast("✓ Instaladas");
+};
+$("#exportAll").onclick = () => toast("Abriendo hoja de compartir…");
+
+renderFiles();
+
+/* ---------- Apps tab: Importadas | Firmadas | Instaladas ---------- */
+const apps = {
+  imported: [
+    { name: "WA-2.24.18.ipa", ver: "2.24.18", mb: 312 },
+    { name: "WA-2.24.10.ipa", ver: "2.24.10", mb: 305 },
+    { name: "Watusi-beta.ipa", ver: "2.24.20 beta", mb: 318 },
+  ],
+  signed: [
+    { name: "WAB 23", bid: "chip.23", mb: 312, when: "hace 5 min" },
+    { name: "WAB 22", bid: "chip.22", mb: 312, when: "hace 5 min" },
+    { name: "WAB 21", bid: "chip.21", mb: 312, when: "hace 6 min" },
+    { name: "WAB 20", bid: "chip.20", mb: 305, when: "hace 1 h" },
+    { name: "WAB 19", bid: "chip.19", mb: 305, when: "hace 1 h" },
+    { name: "WAB 18", bid: "chip.18", mb: 305, when: "hace 1 h" },
+  ],
+  installed: [
+    { name: "WAB 17", bid: "chip.17", mb: 305, when: "ayer 20:15" },
+    { name: "WAB 16", bid: "chip.16", mb: 305, when: "ayer 20:14" },
+    { name: "WAB 15", bid: "chip.15", mb: 305, when: "ayer 20:12" },
+    { name: "WAB 14", bid: "chip.14", mb: 298, when: "hace 3 días" },
+    { name: "WAB 13", bid: "chip.13", mb: 298, when: "hace 3 días" },
+    { name: "WAB 12", bid: "chip.12", mb: 298, when: "hace 3 días" },
+    { name: "WAB 11", bid: "chip.11", mb: 298, when: "hace 1 semana" },
+  ],
+};
+let appTab = 0, selIpa = 0;
+function addSigned(nums, np, bp) { nums.slice().reverse().forEach(n => apps.signed.unshift({ name: `${np} ${f2(n)}`, bid: `${bp}.${f2(n)}`, mb: 312, when: "ahora" })); renderApps(); }
+function removeWithAnim(el, fn) { el.classList.add("out"); setTimeout(fn, 330); }
+function renderApps() {
+  $("#cImp").textContent = apps.imported.length; $("#cSig").textContent = apps.signed.length; $("#cIns").textContent = apps.installed.length;
+  $("#appsChip").innerHTML = `<i class="dot ${apps.signed.length ? "" : "off"}"></i> ${apps.signed.length} firmada${apps.signed.length === 1 ? "" : "s"}`;
+  const box = $("#appList"); let h = "";
+  if (appTab === 0) {
+    h += `<div class="glass">` + (apps.imported.length ? apps.imported.map((a, i) => `<div class="app"><div class="row"><div class="ico g">💬</div><div class="grow"><div class="name">${a.name}</div><div class="meta">v${a.ver} · ${a.mb} MB</div></div><button class="sel ${i === selIpa ? "on" : ""}" data-sel="${i}" aria-label="Usar esta IPA" style="background:none;padding:0;cursor:pointer;color:inherit">${i === selIpa ? "✓" : ""}</button><button class="btn-s dng" data-del="imported:${i}">🗑</button></div></div>`).join("") : `<div class="empty"><div class="big">📦</div>Importa una IPA para empezar.</div>`) + `</div>`;
+    h += `<div class="drop" id="dropIpa2"><div class="plus">+</div><b>Importar IPA</b><small>solo .ipa</small></div>`;
+  } else if (appTab === 1) {
+    if (apps.signed.length) h += `<div class="bulk"><span class="meta">${apps.signed.length} lista${apps.signed.length === 1 ? "" : "s"} para instalar</span><button class="btn-s pri" id="instAllSigned">Instalar ${apps.signed.length}</button></div>`;
+    h += `<div class="glass">` + (apps.signed.length ? apps.signed.map((a, i) => `<div class="app"><div class="row"><div class="ico g">💬</div><div class="grow"><div class="name">${a.name}</div><div class="meta">${a.bid} · ${a.mb} MB · ${a.when}</div></div></div><div class="acts"><button class="btn-s pri" data-inst="${i}">Instalar</button><button class="btn-s" data-share="${i}">Compartir</button><button class="btn-s dng" data-del="signed:${i}">🗑</button></div></div>`).join("") : `<div class="empty"><div class="big">✍️</div>Aún no has firmado apps.<br>Ve a la pestaña Firmar.</div>`) + `</div>`;
+  } else {
+    h += `<div class="glass">` + (apps.installed.length ? apps.installed.map((a, i) => `<div class="app"><div class="row"><div class="ico g">💬</div><div class="grow"><div class="name">${a.name}</div><div class="meta">${a.bid} · instalada ${a.when}</div></div><span class="pill-s">✓ Instalada</span></div><div class="acts"><button class="btn-s" data-reinst="${i}">Reinstalar</button><button class="btn-s dng" data-del="installed:${i}">Quitar</button></div></div>`).join("") : `<div class="empty"><div class="big">📲</div>Aún no has instalado apps desde aquí.</div>`) + `</div>`;
+    if (apps.installed.length) h += `<p class="meta" style="margin:0 4px">Historial de instalaciones hechas desde la app. Si borras una app del iPhone, sigue apareciendo aquí.</p>`;
+  }
+  box.innerHTML = h;
+  $$("[data-del]", box).forEach(b => b.onclick = () => { const [k, i] = b.dataset.del.split(":"); removeWithAnim(b.closest(".app"), () => { apps[k].splice(+i, 1); renderApps(); if (k === "imported") { selIpa = Math.min(selIpa, Math.max(0, apps.imported.length - 1)); state.ipa = apps.imported[selIpa] || null; renderFiles(); } }); });
+  $$("[data-sel]", box).forEach(b => b.onclick = () => { selIpa = +b.dataset.sel; state.ipa = apps.imported[selIpa]; renderApps(); });
+  $$("[data-inst]", box).forEach(b => b.onclick = async () => { const i = +b.dataset.inst; b.innerHTML = '<span class="ring" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:-2px"></span>'; await new Promise(t => setTimeout(t, 1100)); const a = apps.signed.splice(i, 1)[0]; apps.installed.unshift({ ...a, when: "ahora" }); renderApps(); toast(`✓ ${a.name} instalada`); });
+  $$("[data-reinst]", box).forEach(b => b.onclick = async () => { b.innerHTML = '<span class="ring" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:-2px"></span>'; await new Promise(t => setTimeout(t, 1100)); b.textContent = "Reinstalar"; toast("✓ Reinstalada"); });
+  $$("[data-share]", box).forEach(b => b.onclick = () => toast("Abriendo hoja de compartir…"));
+  const ia = $("#instAllSigned"); if (ia) ia.onclick = () => { toast("Instalando… acepta cada aviso de iOS"); };
+  const di = $("#dropIpa2"); if (di) di.onclick = () => { apps.imported.push({ name: `WA-${apps.imported.length + 1}.ipa`, ver: "2.24.18", mb: 312 }); state.ipa = apps.imported[selIpa]; renderApps(); renderFiles(); toast("✓ IPA importada"); };
+}
+
+/* ---------- About: update check (GET api.github.com/repos/danieldussan/infinityX-Signer/releases/latest) ---------- */
+let updN = 0;
+$$("#aboutCard [data-url]").forEach(a => a.onclick = e => { e.preventDefault(); toast("Abriendo " + a.dataset.url.replace("https://", "") + "…"); });
+$("#updBtn").onclick = async () => {
+  const b = $("#updBtn"), card = $("#updCard"); card.style.display = "none";
+  b.innerHTML = '<span class="ring" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:-2px"></span>'; $("#updMeta").textContent = "Consultando GitHub…";
+  await new Promise(t => setTimeout(t, 1200)); b.textContent = "Buscar"; updN++;
+  if (updN % 2 === 1) {
+    $("#updMeta").textContent = "Hay una versión nueva";
+    card.innerHTML = `<div class="upd"><div class="row"><b style="font-size:16px">v0.3.0 disponible</b><span class="pill-s" style="margin-left:auto">Nueva</span></div>
+      <ul><li>Pestaña Apps con firmadas e instaladas</li><li>Avisos de nuevas versiones</li><li>Correcciones de importación</li></ul>
+      <button class="cta" id="updGo" style="height:48px;font-size:15px">Ver en GitHub</button>
+      <p class="meta" style="margin:10px 2px 0">Descarga el .ipa de la release, impórtalo en <b>Apps › Importadas</b> y fírmalo con tu certificado.</p></div>`;
+    card.style.display = "block"; $("#updGo").onclick = () => toast("Abriendo github.com/…/releases/tag/v0.3.0");
+  } else {
+    $("#updMeta").textContent = "Última comprobación: ahora";
+    card.innerHTML = `<div class="upd ok"><b>✓ Estás al día</b><div class="meta">Tienes la última versión (0.2.2).</div></div>`; card.style.display = "block";
+  }
+};
+
+/* ---------- Discreet update banner (auto check at launch, max once a day) ---------- */
+function showUpdateInSettings() {
+  go(3); $("#banner").classList.remove("on"); $("#setBadge").classList.remove("on");
+  if (!$("#updCard").innerHTML.includes("v0.3.0")) { updN = 0; $("#updBtn").click(); }
+}
+setTimeout(() => { $("#banner").classList.add("on"); $("#setBadge").classList.add("on"); }, 1400);
+$("#bnClose").onclick = () => { $("#banner").classList.remove("on"); toast("Te avisaremos de nuevo mañana"); };
+$("#bnView").onclick = showUpdateInSettings;
+$("#banner").querySelector(".grow").onclick = showUpdateInSettings;
+seg($("#appSeg"), k => { appTab = k; renderApps(); });
+renderApps();
+</script>
+</body>
+</html>
