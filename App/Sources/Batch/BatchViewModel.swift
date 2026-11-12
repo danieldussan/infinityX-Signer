@@ -107,11 +107,8 @@ final class BatchViewModel: ObservableObject {
         if p.jobs.isEmpty {
             return SignGate(title: "Escribe un rango", reason: nil, enabled: false)
         }
-        if !profile.covers(bundleID: "\(trimmedBundlePrefix).00") {
-            return SignGate(title: "Perfil no compatible",
-                            reason: "El perfil solo cubre el App ID \(profile.applicationIdentifier); el prefijo \"\(trimmedBundlePrefix)\" no está incluido.",
-                            enabled: false)
-        }
+        // ponytail: no App ID coverage check. Profiles with an exact App ID still install with a different
+        // bundle id when re-signed with Zsign -b (verified with signer.py and Feather), so a check only blocks valid use.
         let n = p.jobs.count
         return SignGate(title: "Firmar \(n) app\(n == 1 ? "" : "s")", reason: nil, enabled: true)
     }

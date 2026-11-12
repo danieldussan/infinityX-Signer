@@ -179,14 +179,6 @@ struct CertificatesView: View {
             infoRow("Equipo", p.teamName.isEmpty ? p.teamID : "\(p.teamName) (\(p.teamID))")
             if let exp = p.expirationDate { infoRow("Vence", Fmt.date(exp)) }
             infoRow("App ID", p.applicationIdentifier)
-            if !p.covers(bundleID: "\(trimmedPrefix).00") {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundColor(Theme.amber)
-                    Text("El prefijo de bundle actual (\"\(trimmedPrefix)\") no está cubierto por este App ID.")
-                        .font(Theme.meta).foregroundColor(Theme.amber)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
             devicesSection(p)
         }
         .transition(.opacity)
