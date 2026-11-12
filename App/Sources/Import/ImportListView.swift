@@ -1,101 +1,42 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
-/// File list for one kind (select, delete, import with the system document picker).
-struct ImportListView: View {
+/// One imported file: icon, name, meta line, selection dot and delete button.
+struct ImportFileRow: View {
     let kind: ImportKind
+    let name: String
+    let meta: String
+    let icon: String
+    var green = false
     @EnvironmentObject var store: ImportStore
-    @EnvironmentObject var log: AppLog
-    @State private var showImporter = false
 
     var body: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(kind.title).font(Theme.headline).foregroundColor(Theme.text)
-                let list = store.names[kind] ?? []
-                if list.isEmpty {
-                    Text("Aún no hay archivos.").font(Theme.body).foregroundColor(Theme.secondaryText)
-                }
-                ForEach(list, id: \.self) { name in
-                    HStack {
-                        Button {
-                            store.select(name, kind: kind)
-                        } label: {
-                            HStack {
-                                Image(systemName: store.selectedName(kind) == name ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(Theme.accent)
-                                Text(name).font(Theme.body).foregroundColor(Theme.text).lineLimit(1)
-                            }
-                        }
-                        Spacer()
-                        Button {
-                            store.delete(name, kind: kind)
-                        } label: {
-                            Image(systemName: "trash").foregroundColor(Theme.danger)
-                        }
+        let selected = store.selectedName(kind) == name
+        HStack(spacing: 12) {
+            Button {
+                Haptics.light()
+                store.select(name, kind: kind)
+            } label: {
+                HStack(spacing: 12) {
+                    IconBox(systemName: icon, green: green)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(name).font(Theme.name).foregroundColor(Theme.text).lineLimit(1).truncationMode(.middle)
+                        Text(meta).font(Theme.meta).foregroundColor(Theme.text2).lineLimit(2)
                     }
+                    Spacer(minLength: 0)
+                    SelectDot(on: selected)
                 }
-                Button(kind.importLabel) { showImporter = true }
-                    .buttonStyle(PrimaryButtonStyle())
+                .contentShape(Rectangle())
             }
-        }
-        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.item]) { result in
-            Task { @MainActor in
-                switch result {
-                case .success(let url):
-                    do { try store.importFile(from: url, kind: kind) }
-                    catch { log.add("Importar: \(error.localizedDescription)") }
-                case .failure(let error):
-                    log.add("Importar: \(error.localizedDescription)")
-                }
+            .buttonStyle(PressScaleStyle(scale: 0.98))
+            Button {
+                withAnimation(Theme.spring) { store.delete(name, kind: kind) }
+            } label: {
+                Image(systemName: "trash").font(.system(size: 15)).foregroundColor(Theme.red)
+                    .frame(width: 36, height: 36)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Eliminar \(name)")
         }
-    }
-}
-
-struct CertificatesView: View {
-    @EnvironmentObject var store: ImportStore
-    @State private var password = ""
-
-    var body: some View {
-        Screen("Certificados") {
-            ImportListView(kind: .certificate)
-            GlassCard {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Contraseña del .p12").font(Theme.headline).foregroundColor(Theme.text)
-                    if let cert = store.selectedName(.certificate) {
-                        SecureField("Contraseña", text: $password)
-                            .textFieldStyle(.roundedBorder)
-                            .onChange(of: password) { newValue in
-                                KeychainStore.setPassword(newValue, for: cert)
-                            }
-                        Text("Se guarda en el Keychain, asociada a \(cert).")
-                            .font(Theme.caption).foregroundColor(Theme.secondaryText)
-                    } else {
-                        Text("Selecciona un certificado primero.")
-                            .font(Theme.body).foregroundColor(Theme.secondaryText)
-                    }
-                }
-            }
-            ImportListView(kind: .profile)
-        }
-        .onAppear { loadPassword() }
-        .onChange(of: store.selectedName(.certificate)) { _ in loadPassword() }
-    }
-
-    private func loadPassword() {
-        if let cert = store.selectedName(.certificate) {
-            password = KeychainStore.password(for: cert) ?? ""
-        } else {
-            password = ""
-        }
-    }
-}
-
-struct IPAsView: View {
-    var body: some View {
-        Screen("IPAs") {
-            ImportListView(kind: .ipa)
-        }
+        .padding(.vertical, 6)
     }
 }

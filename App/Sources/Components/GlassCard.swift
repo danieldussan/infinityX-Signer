@@ -1,5 +1,23 @@
 import SwiftUI
 
+/// Glass surface: material + gradient fill + 1px border + top inner highlight.
+struct GlassBackground: View {
+    var radius: CGFloat = Theme.cardRadius
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        ZStack {
+            shape.fill(.ultraThinMaterial)
+            shape.fill(LinearGradient(colors: [Theme.glass2, Theme.glass],
+                                      startPoint: .topLeading, endPoint: .bottomTrailing))
+            shape.strokeBorder(Theme.line, lineWidth: 1)
+            shape.strokeBorder(LinearGradient(colors: [Color.white.opacity(0.18), Color.clear],
+                                              startPoint: .top, endPoint: .center), lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.45), radius: 16, x: 0, y: 10)
+    }
+}
+
 struct GlassCard<Content: View>: View {
     private let content: Content
 
@@ -11,54 +29,100 @@ struct GlassCard<Content: View>: View {
         content
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
-            )
+            .background(GlassBackground())
     }
 }
 
-struct PrimaryButtonStyle: ButtonStyle {
-    var enabled: Bool = true
+/// Staggered entrance: fades and slides up, delayed by `index`.
+struct Rise: ViewModifier {
+    let index: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shown = false
 
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(Theme.headline)
-            .foregroundColor(.black)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Theme.accent.opacity(enabled ? (configuration.isPressed ? 0.7 : 1.0) : 0.35))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown ? 0 : 18)
+            .onAppear {
+                if reduceMotion {
+                    shown = true
+                } else {
+                    withAnimation(Theme.riseSpring.delay(Double(index) * Theme.riseStagger)) { shown = true }
+                }
+            }
     }
 }
 
-/// Common screen wrapper: background + scrolling column with an italic title.
-struct Screen<Content: View>: View {
+extension View {
+    func rise(_ index: Int) -> some View { modifier(Rise(index: index)) }
+}
+
+/// "INFINITY X" logo: italic heavy with a gradient X.
+struct BrandLogo: View {
+    var showSubtitle = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .lastTextBaseline, spacing: 6) {
+                Text("INFINITY").font(Theme.logo).foregroundColor(Theme.text)
+                Text("X").font(Theme.logoX).foregroundStyle(Theme.logoXGradient).padding(.trailing, 3)
+            }
+            if showSubtitle {
+                Text("SIGNER").font(.system(size: 11, weight: .semibold)).tracking(2.2).foregroundColor(Theme.text3)
+            }
+        }
+    }
+}
+
+/// Common screen wrapper: brand header (+ optional trailing chip), big title, subtitle, content.
+/// The global XBackground lives in ContentView.
+struct XScreen<Accessory: View, Content: View>: View {
     let title: String
+    let subtitle: String
+    var showSubtitleLogo = false
+    private let accessory: Accessory
     private let content: Content
 
-    init(_ title: String, @ViewBuilder content: () -> Content) {
+    init(title: String, subtitle: String, showSubtitleLogo: Bool = false,
+         @ViewBuilder accessory: () -> Accessory, @ViewBuilder content: () -> Content) {
         self.title = title
+        self.subtitle = subtitle
+        self.showSubtitleLogo = showSubtitleLogo
+        self.accessory = accessory()
         self.content = content()
     }
 
     var body: some View {
-        ZStack {
-            XBackground()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(spacing: 10) {
-                        Image(Theme.logoImageName)
-                            .resizable()
-                            .frame(width: 36, height: 36)
-                            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                        Text(title).font(Theme.title).foregroundColor(Theme.text)
-                    }
-                    content
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: Theme.cardSpacing) {
+                HStack {
+                    BrandLogo(showSubtitle: showSubtitleLogo)
+                    Spacer()
+                    accessory
                 }
-                .padding(16)
+                .padding(.horizontal, 2)
+                .padding(.top, 8)
+                .rise(0)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title).font(Theme.screenTitle).foregroundColor(Theme.text)
+                    Text(subtitle).font(Theme.sub).foregroundColor(Theme.text2)
+                }
+                .padding(.horizontal, 2)
+                .padding(.bottom, 2)
+                .rise(1)
+
+                content
             }
+            .padding(.horizontal, Theme.screenPadding)
+            .padding(.bottom, 120)
         }
+    }
+}
+
+extension XScreen where Accessory == EmptyView {
+    init(title: String, subtitle: String, showSubtitleLogo: Bool = false, @ViewBuilder content: () -> Content) {
+        self.init(title: title, subtitle: subtitle, showSubtitleLogo: showSubtitleLogo,
+                  accessory: { EmptyView() }, content: content)
     }
 }

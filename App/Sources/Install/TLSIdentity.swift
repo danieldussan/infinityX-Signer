@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import Security
+import InfinityXCore
 
 enum TLSIdentityError: LocalizedError {
     case message(String)
@@ -53,24 +54,9 @@ enum DER {
         return Data(d[kids[2].start..<kids[2].end])
     }
 
-    /// notAfter of an X.509 certificate (DER).
+    /// notAfter of an X.509 certificate (DER); logic lives in InfinityXCore.
     static func notAfter(ofCertificate data: Data) -> Date? {
-        let d = [UInt8](data)
-        guard let root = read(d, at: 0), root.tag == 0x30 else { return nil }
-        let top = children(d, root)
-        guard let tbs = top.first, tbs.tag == 0x30 else { return nil }
-        let kids = children(d, tbs)
-        let offset = (kids.first?.tag == 0xA0) ? 1 : 0
-        guard kids.count > offset + 3 else { return nil }
-        let validity = children(d, kids[offset + 3])
-        guard validity.count == 2 else { return nil }
-        let t = validity[1]
-        guard let text = String(bytes: d[t.start..<t.end], encoding: .ascii) else { return nil }
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = (t.tag == 0x18) ? "yyyyMMddHHmmss'Z'" : "yyMMddHHmmss'Z'"
-        return f.date(from: text)
+        certificateNotAfter(der: data)
     }
 }
 
