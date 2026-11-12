@@ -3,6 +3,7 @@ import SwiftUI
 struct TabItem {
     let title: String
     let systemImage: String
+    var badge = false
 }
 
 /// Floating glass tab bar with a highlight pill that slides between tabs.
@@ -25,6 +26,14 @@ struct FloatingTabBar: View {
                             .font(.system(size: 20, weight: .semibold))
                             .scaleEffect(selected ? 1.12 : 1)
                             .offset(y: selected ? -1 : 0)
+                            .overlay(alignment: .topTrailing) {
+                                if items[i].badge {
+                                    Circle().fill(Theme.orange).frame(width: 9, height: 9)
+                                        .shadow(color: Theme.orange, radius: 4)
+                                        .offset(x: 5, y: -2)
+                                        .accessibilityLabel("Novedades")
+                                }
+                            }
                         Text(items[i].title).font(.system(size: 11, weight: .semibold))
                     }
                     .foregroundColor(selected ? Theme.text : Theme.text2)

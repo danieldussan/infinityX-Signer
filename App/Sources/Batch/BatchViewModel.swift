@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import InfinityXCore
 
 struct BatchRow: Identifiable {
@@ -42,6 +43,7 @@ final class BatchViewModel: ObservableObject {
     @Published var errorText: String?
     @Published var isRunning = false
     @Published var isInstalling = false
+    @Published private(set) var installFinished = false
     @Published var showOverlay = false
     @Published private(set) var signed: [SignedApp] = []
     @Published var counterLast = UserDefaultsCounterStore().last
@@ -115,9 +117,11 @@ final class BatchViewModel: ObservableObject {
 
     // MARK: Run
 
-    func start(imports: ImportStore, log: AppLog) {
+    func start(imports: ImportStore, log: AppLog, library: AppLibrary) {
         guard !isRunning else { return }
         errorText = nil
+        // Close the keyboard (e.g. after typing the range) before the progress overlay appears.
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
 
         guard let ipa = imports.url(for: .ipa),
               let p12 = imports.url(for: .certificate),
@@ -138,6 +142,7 @@ final class BatchViewModel: ObservableObject {
                                      stripPlugins: stripPlugins)
         rows = jobs.map { BatchRow(job: $0, state: .pending) }
         signed = []
+        installFinished = false
         isRunning = true
         showOverlay = true
         KeepAlive.shared.start()
@@ -148,6 +153,8 @@ final class BatchViewModel: ObservableObject {
                 self?.update(number, state, log: log)
             }
             self.signed = result
+            // Keep every signed app in Apps > Firmadas, even if the overlay is closed without installing.
+            library.add(result)
             self.refreshCounter()
             KeepAlive.shared.stop()
             self.isRunning = false
@@ -165,8 +172,20 @@ final class BatchViewModel: ObservableObject {
             await coordinator.installAll(apps)
             KeepAlive.shared.stop()
             self?.isInstalling = false
+            self?.installFinished = true
             Haptics.success()
         }
+    }
+
+    /// Close the overlay and reset the batch so the next run starts clean (signed IPAs stay in Documents/Signed).
+    func finish() {
+        showOverlay = false
+        guard !isRunning, !isInstalling else { return }
+        numbersText = ""
+        rows = []
+        signed = []
+        installFinished = false
+        errorText = nil
     }
 
     // MARK: Progress

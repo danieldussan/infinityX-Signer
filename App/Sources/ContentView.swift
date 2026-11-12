@@ -4,16 +4,22 @@ import SwiftUI
 /// progress overlay and toasts.
 struct ContentView: View {
     @EnvironmentObject var coordinator: InstallCoordinator
+    @EnvironmentObject var library: AppLibrary
+    @EnvironmentObject var updater: UpdateChecker
+    @EnvironmentObject var toaster: Toaster
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     // The batch state lives here so it survives tab switches (screens are re-created for the entrance animation).
     @StateObject private var batch = BatchViewModel()
     @State private var tab = 2
 
-    private let tabs = [
-        TabItem(title: "Certificado", systemImage: "key.fill"),
-        TabItem(title: "IPAs", systemImage: "shippingbox.fill"),
-        TabItem(title: "Firmar", systemImage: "signature"),
-        TabItem(title: "Ajustes", systemImage: "gearshape.fill"),
-    ]
+    private var tabs: [TabItem] {
+        [
+            TabItem(title: "Certificado", systemImage: "key.fill"),
+            TabItem(title: "Apps", systemImage: "square.stack.3d.up.fill"),
+            TabItem(title: "Firmar", systemImage: "signature"),
+            TabItem(title: "Ajustes", systemImage: "gearshape.fill", badge: updater.badgeVisible),
+        ]
+    }
 
     var body: some View {
         ZStack {
@@ -24,7 +30,7 @@ struct ContentView: View {
                 case 0:
                     CertificatesView(batch: batch).transition(screenTransition)
                 case 1:
-                    IPAsView().transition(screenTransition)
+                    AppsView().transition(screenTransition)
                 case 2:
                     BatchView(vm: batch).transition(screenTransition)
                 default:
@@ -39,6 +45,22 @@ struct ContentView: View {
             }
             .ignoresSafeArea(.keyboard)
 
+            VStack {
+                if updater.bannerVisible, case .available(let version, _, _) = updater.state {
+                    UpdateBanner(version: version, onView: {
+                        updater.reveal()
+                        withAnimation(Theme.spring) { tab = 3 }
+                    }, onClose: {
+                        updater.dismissBanner()
+                        toaster.show("Te avisaremos de nuevo mañana")
+                    })
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                }
+                Spacer()
+            }
+            .zIndex(8)
+            .animation(reduceMotion ? nil : Theme.spring, value: updater.bannerVisible)
+
             if batch.showOverlay {
                 ProgressOverlay(vm: batch)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -49,6 +71,12 @@ struct ContentView: View {
         }
         .animation(Theme.spring, value: batch.showOverlay)
         .preferredColorScheme(.dark)
+        .task {
+            coordinator.onInstalled = { [weak library] app in
+                library?.markInstalled(fileName: app.ipaURL.lastPathComponent)
+            }
+            await updater.autoCheckIfNeeded()
+        }
         .sheet(item: $coordinator.safariTarget) { target in
             SafariInstallSheet(url: target.url).ignoresSafeArea()
         }

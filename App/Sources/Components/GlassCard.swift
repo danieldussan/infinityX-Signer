@@ -81,11 +81,14 @@ struct XScreen<Accessory: View, Content: View>: View {
     let title: String
     let subtitle: String
     var showSubtitleLogo = false
+    /// Id (set with `.id(...)` on a content view) to scroll to when this value changes.
+    var scrollTo: String? = nil
     private let accessory: Accessory
     private let content: Content
 
-    init(title: String, subtitle: String, showSubtitleLogo: Bool = false,
+    init(title: String, subtitle: String, showSubtitleLogo: Bool = false, scrollTo: String? = nil,
          @ViewBuilder accessory: () -> Accessory, @ViewBuilder content: () -> Content) {
+        self.scrollTo = scrollTo
         self.title = title
         self.subtitle = subtitle
         self.showSubtitleLogo = showSubtitleLogo
@@ -94,6 +97,19 @@ struct XScreen<Accessory: View, Content: View>: View {
     }
 
     var body: some View {
+        ScrollViewReader { proxy in
+            scroll
+                .onChange(of: scrollTo) { target in
+                    guard let target = target else { return }
+                    // Wait for the entrance animation before scrolling.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        withAnimation(Theme.spring) { proxy.scrollTo(target, anchor: .top) }
+                    }
+                }
+        }
+    }
+
+    private var scroll: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: Theme.cardSpacing) {
                 HStack {
@@ -118,12 +134,14 @@ struct XScreen<Accessory: View, Content: View>: View {
             .padding(.horizontal, Theme.screenPadding)
             .padding(.bottom, 120)
         }
+        .scrollDismissesKeyboard(.interactively)
     }
 }
 
 extension XScreen where Accessory == EmptyView {
-    init(title: String, subtitle: String, showSubtitleLogo: Bool = false, @ViewBuilder content: () -> Content) {
-        self.init(title: title, subtitle: subtitle, showSubtitleLogo: showSubtitleLogo,
+    init(title: String, subtitle: String, showSubtitleLogo: Bool = false, scrollTo: String? = nil,
+         @ViewBuilder content: () -> Content) {
+        self.init(title: title, subtitle: subtitle, showSubtitleLogo: showSubtitleLogo, scrollTo: scrollTo,
                   accessory: { EmptyView() }, content: content)
     }
 }

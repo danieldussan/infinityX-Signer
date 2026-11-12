@@ -7,12 +7,14 @@ struct DiagnosticsView: View {
     @EnvironmentObject var ssl: SSLPack
     @EnvironmentObject var log: AppLog
     @EnvironmentObject var toaster: Toaster
+    @EnvironmentObject var updater: UpdateChecker
+    @State private var scrollTarget: String?
     @State private var counter = UserDefaultsCounterStore().last
 
     private let modes: [InstallMode] = [.semiLocal, .fullyLocal, .export]
 
     var body: some View {
-        XScreen(title: "Ajustes", subtitle: "Instalación, servidor y diagnóstico.") {
+        XScreen(title: "Ajustes", subtitle: "Instalación, servidor y diagnóstico.", scrollTo: scrollTarget) {
             GlassCard {
                 VStack(alignment: .leading, spacing: 10) {
                     SectionLabel("Método de instalación")
@@ -43,8 +45,15 @@ struct DiagnosticsView: View {
             }
             .rise(5)
             logCard.rise(6)
+            AboutCard().id("about").rise(7)
         }
-        .onAppear { counter = UserDefaultsCounterStore().last }
+        .onAppear {
+            counter = UserDefaultsCounterStore().last
+            if updater.revealRequested {
+                updater.revealRequested = false
+                scrollTarget = "about"
+            }
+        }
     }
 
     private var sslCard: some View {

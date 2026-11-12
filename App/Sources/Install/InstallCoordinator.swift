@@ -49,6 +49,9 @@ final class InstallCoordinator: ObservableObject {
         didSet { UserDefaults.standard.set(plistHostText, forKey: "install.plistHost") }
     }
 
+    /// Called when an item reaches `.completed` (the app library marks it as installed).
+    var onInstalled: ((SignedApp) -> Void)?
+
     let ssl = SSLPack()
     private let server = LocalServer()
     private var port: UInt16 = 0
@@ -187,7 +190,10 @@ final class InstallCoordinator: ObservableObject {
     }
 
     private func setState(_ id: String, _ state: InstallState) {
-        if let i = items.firstIndex(where: { $0.id == id }) { items[i].state = state }
+        guard let i = items.firstIndex(where: { $0.id == id }) else { return }
+        let was = items[i].state
+        items[i].state = state
+        if state == .completed, was != .completed { onInstalled?(items[i].app) }
     }
 
     private static func installPage(itms: URL) -> String {

@@ -54,14 +54,19 @@ struct GhostButtonStyle: ButtonStyle {
 
 /// Small pill button ("Ver", "Actualizar").
 struct SmallButtonStyle: ButtonStyle {
+    enum Kind { case normal, primary, danger }
+    var kind: Kind = .normal
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 13.5, weight: .semibold))
-            .foregroundColor(.white)
+            .foregroundColor(kind == .danger ? Theme.red : .white)
             .padding(.horizontal, 14)
             .frame(minWidth: 44, minHeight: 38)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.glass2))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.line, lineWidth: 1))
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(kind == .primary ? AnyShapeStyle(Theme.segGradient) : AnyShapeStyle(Theme.glass2)))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(kind == .danger ? Theme.red.opacity(0.45) : Theme.line, lineWidth: 1))
             .scaleEffect(configuration.isPressed ? 0.94 : 1)
             .animation(Theme.press, value: configuration.isPressed)
     }
@@ -261,6 +266,8 @@ struct XSegmented: View {
     let options: [String]
     @Binding var selection: Int
     var height: CGFloat = 36
+    /// Optional count badge per option.
+    var counts: [Int]? = nil
 
     var body: some View {
         GeometryReader { geo in
@@ -277,10 +284,20 @@ struct XSegmented: View {
                             Haptics.light()
                             withAnimation(Theme.spring) { selection = i }
                         } label: {
-                            Text(options[i])
-                                .font(.system(size: 13.5, weight: .semibold))
-                                .foregroundColor(selection == i ? Theme.text : Theme.text2)
-                                .frame(width: w, height: height)
+                            HStack(spacing: 5) {
+                                Text(options[i])
+                                    .font(.system(size: 13.5, weight: .semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                if let counts = counts, i < counts.count {
+                                    Text("\(counts[i])")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .padding(.horizontal, 6).padding(.vertical, 1)
+                                        .background(Capsule().fill(Color.white.opacity(selection == i ? 0.25 : 0.12)))
+                                }
+                            }
+                            .foregroundColor(selection == i ? Theme.text : Theme.text2)
+                            .frame(width: w, height: height)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)

@@ -6,6 +6,7 @@ struct BatchView: View {
     @ObservedObject var vm: BatchViewModel
     @EnvironmentObject var imports: ImportStore
     @EnvironmentObject var log: AppLog
+    @EnvironmentObject var library: AppLibrary
 
     private let maxTags = 8
 
@@ -22,7 +23,7 @@ struct BatchView: View {
             prefixCard.rise(4)
             VStack(spacing: 10) {
                 Button {
-                    vm.start(imports: imports, log: log)
+                    vm.start(imports: imports, log: log, library: library)
                 } label: {
                     Text(gate.title)
                 }

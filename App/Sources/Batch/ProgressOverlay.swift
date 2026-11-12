@@ -5,6 +5,7 @@ import InfinityXCore
 struct ProgressOverlay: View {
     @ObservedObject var vm: BatchViewModel
     @EnvironmentObject var coordinator: InstallCoordinator
+    @EnvironmentObject var toaster: Toaster
     @State private var shareItems: [URL] = []
     @State private var showShare = false
 
@@ -123,25 +124,38 @@ struct ProgressOverlay: View {
         }
     }
 
+    /// True once the install queue ran and every app installed (nothing left to retry).
+    private var allInstalled: Bool {
+        guard vm.installFinished else { return false }
+        return !coordinator.items.contains { item in
+            if case .failed = item.state { return true }
+            return false
+        }
+    }
+
     private var actions: some View {
         VStack(spacing: 10) {
-            if !vm.signed.isEmpty && coordinator.mode != .export {
+            if !vm.signed.isEmpty && coordinator.mode != .export && !allInstalled {
                 Button {
                     vm.install(coordinator: coordinator)
                 } label: {
-                    Text(vm.isInstalling ? "Instalando..." : "Instalar \(vm.signed.count)")
+                    Text(vm.isInstalling ? "Instalando..." : (vm.installFinished ? "Reintentar instalación" : "Instalar \(vm.signed.count)"))
                 }
                 .buttonStyle(CTAButtonStyle(enabled: !vm.isInstalling))
                 .disabled(vm.isInstalling)
             }
-            if !vm.signed.isEmpty {
+            if !vm.signed.isEmpty && !allInstalled {
                 Button("Exportar IPAs") {
                     shareItems = vm.signed.map { $0.ipaURL }
                     showShare = true
                 }
                 .buttonStyle(GhostButtonStyle())
             }
-            Button("Cerrar") { vm.showOverlay = false }
+            Button(allInstalled ? "Listo" : "Cerrar") {
+                let keptForLater = !allInstalled && !vm.signed.isEmpty && !vm.isInstalling
+                vm.finish()
+                if keptForLater { toaster.show("Guardadas en Apps › Firmadas") }
+            }
                 .buttonStyle(GhostButtonStyle(height: 48))
         }
         .padding(.top, 12)
