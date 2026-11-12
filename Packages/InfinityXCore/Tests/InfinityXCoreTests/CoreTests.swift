@@ -246,3 +246,35 @@ final class VersionTests: XCTestCase {
         XCTAssertFalse(isNewerVersion(remote: "1.0.0", local: "abc"))
     }
 }
+
+final class IPAInfoTests: XCTestCase {
+    private func plist(_ dict: [String: Any], format: PropertyListSerialization.PropertyListFormat) throws -> Data {
+        try PropertyListSerialization.data(fromPropertyList: dict, format: format, options: 0)
+    }
+
+    func testXMLAndBinary() throws {
+        let dict: [String: Any] = ["CFBundleDisplayName": "WhatsApp", "CFBundleName": "WA",
+                                   "CFBundleIdentifier": "net.whatsapp.WhatsApp",
+                                   "CFBundleShortVersionString": "2.24.18", "CFBundleVersion": "99"]
+        for format in [PropertyListSerialization.PropertyListFormat.xml, .binary] {
+            let info = IPAInfo(infoPlist: try plist(dict, format: format), appFolderName: "Foo.app")
+            XCTAssertEqual(info, IPAInfo(displayName: "WhatsApp", bundleID: "net.whatsapp.WhatsApp", version: "2.24.18"))
+        }
+    }
+
+    func testFallbacks() throws {
+        let noDisplay = IPAInfo(infoPlist: try plist(["CFBundleName": "WA", "CFBundleIdentifier": "a.b",
+                                                      "CFBundleVersion": "7"], format: .binary),
+                                appFolderName: "Foo.app")
+        XCTAssertEqual(noDisplay?.displayName, "WA")
+        XCTAssertEqual(noDisplay?.version, "7")
+        let onlyId = IPAInfo(infoPlist: try plist(["CFBundleIdentifier": "a.b"], format: .xml), appFolderName: "Foo.app")
+        XCTAssertEqual(onlyId?.displayName, "Foo")
+        XCTAssertEqual(onlyId?.version, "")
+    }
+
+    func testInvalid() throws {
+        XCTAssertNil(IPAInfo(infoPlist: try plist(["CFBundleName": "WA"], format: .xml), appFolderName: "Foo.app"))
+        XCTAssertNil(IPAInfo(infoPlist: Data("garbage".utf8), appFolderName: "Foo.app"))
+    }
+}
