@@ -6,3 +6,4 @@
   - [ ] on-device: Semi Local install 1 app
   - [ ] on-device: batch of 3 sequential installs
   - [ ] on-device: Fully Local + SSL refresh (best effort)
+- [x] 04 Round 2 (untested, no local compile): Feather-style document picker import, ProvisioningProfile parser in Core (22 tests green), cert/profile info + password check (SecPKCS12Import), full UI redesign per mockups/01-app.html; awaiting CI compile + on-device check
