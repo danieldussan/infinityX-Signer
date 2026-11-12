@@ -81,5 +81,5 @@ enum Theme {
     static let riseStagger: Double = 0.06
 
     /// Name of the logo image in the asset catalog (swap the PNG to rebrand).
-    static let logoImageName = "Logo"
+    static let wordmarkImageName = "Wordmark"
 }

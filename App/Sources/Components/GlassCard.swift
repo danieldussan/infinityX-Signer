@@ -57,16 +57,17 @@ extension View {
     func rise(_ index: Int) -> some View { modifier(Rise(index: index)) }
 }
 
-/// "INFINITY X" logo: italic heavy with a gradient X.
+/// "INFINITY X" wordmark from the designer asset (Wordmark imageset).
 struct BrandLogo: View {
     var showSubtitle = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .lastTextBaseline, spacing: 6) {
-                Text("INFINITY").font(Theme.logo).foregroundColor(Theme.text)
-                Text("X").font(Theme.logoX).foregroundStyle(Theme.logoXGradient).padding(.trailing, 3)
-            }
+            Image(Theme.wordmarkImageName)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 30)
+                .accessibilityLabel("Infinity X")
             if showSubtitle {
                 Text("SIGNER").font(.system(size: 11, weight: .semibold)).tracking(2.2).foregroundColor(Theme.text3)
             }
