@@ -52,6 +52,10 @@ struct ContentView: View {
                     ImportBanner(jobs: imports.activeImports)
                         .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 }
+                if coordinator.isRunning {
+                    InstallBanner()
+                        .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                }
                 if updater.bannerVisible, case .available(let version, _, _) = updater.state {
                     UpdateBanner(version: version, onView: {
                         updater.reveal()
@@ -67,6 +71,7 @@ struct ContentView: View {
             .zIndex(8)
             .animation(reduceMotion ? nil : Theme.spring, value: updater.bannerVisible)
             .animation(reduceMotion ? nil : Theme.spring, value: imports.activeImports.isEmpty)
+            .animation(reduceMotion ? nil : Theme.spring, value: coordinator.isRunning)
 
             if batch.showOverlay {
                 ProgressOverlay(vm: batch)
@@ -94,7 +99,9 @@ struct ContentView: View {
             }
             await updater.autoCheckIfNeeded()
         }
-        .sheet(item: $coordinator.safariTarget) { target in
+        // The setter only runs on user dismissal (swipe / Listo); programmatic closes don't call it.
+        .sheet(item: Binding(get: { coordinator.safariTarget },
+                             set: { if $0 == nil { coordinator.safariDismissedByUser() } })) { target in
             SafariInstallSheet(url: target.url).ignoresSafeArea()
         }
     }

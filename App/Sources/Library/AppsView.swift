@@ -75,15 +75,31 @@ struct AppsView: View {
     @ViewBuilder
     private func signedSection(_ records: [AppRecord]) -> some View {
         if !records.isEmpty {
+            let failed = records.filter { coordinator.isRetryable($0.signedApp) }
             HStack {
                 Text("\(records.count) lista\(records.count == 1 ? "" : "s") para instalar")
                     .font(Theme.meta).foregroundColor(Theme.text2)
                 Spacer()
-                Button("Instalar \(records.count)") { install(records) }
-                    .buttonStyle(SmallButtonStyle(kind: .primary))
-                    .disabled(busy)
+                if busy {
+                    Button(coordinator.cancelling ? "Cancelando..." : "Cancelar") { coordinator.cancelAll() }
+                        .buttonStyle(SmallButtonStyle(kind: .danger))
+                        .disabled(coordinator.cancelling)
+                } else {
+                    Button("Instalar \(records.count)") { install(records) }
+                        .buttonStyle(SmallButtonStyle(kind: .primary))
+                }
             }
             .padding(.horizontal, 4)
+            if !failed.isEmpty && !busy {
+                HStack {
+                    Text("\(failed.count) fallida\(failed.count == 1 ? "" : "s") o cancelada\(failed.count == 1 ? "" : "s")")
+                        .font(Theme.meta).foregroundColor(Theme.red)
+                    Spacer()
+                    Button("Reintentar \(failed.count)") { install(failed) }
+                        .buttonStyle(SmallButtonStyle(kind: .primary))
+                }
+                .padding(.horizontal, 4)
+            }
         }
         GlassCard {
             if records.isEmpty {
@@ -94,8 +110,14 @@ struct AppsView: View {
                         VStack(alignment: .leading, spacing: 10) {
                             recordHeader(r, icon: "signature",
                                          meta: "\(r.bundleID) · \(Fmt.size(r.sizeBytes)) · \(RelativeTime.string(r.signedAt))")
+                            if let st = coordinator.item(for: r.signedApp)?.state, st.isRetryable {
+                                Text(st.label).font(Theme.meta).foregroundColor(Theme.red)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                             HStack(spacing: 8) {
-                                Button { install([r]) } label: { actionLabel(r, "Instalar") }
+                                Button { install([r]) } label: {
+                                    actionLabel(r, coordinator.isRetryable(r.signedApp) ? "Reintentar" : "Instalar")
+                                }
                                     .buttonStyle(SmallButtonStyle(kind: .primary))
                                     .disabled(busy)
                                 Button("Compartir") {
@@ -203,17 +225,21 @@ struct AppsView: View {
         if r.id != list.last?.id { Rectangle().fill(Theme.line).frame(height: 1) }
     }
 
-    /// Spinner while this app is being installed, otherwise the label.
+    /// Spinner only while iOS is working on this app; "En cola" while it waits its turn.
     @ViewBuilder
     private func actionLabel(_ r: AppRecord, _ title: String) -> some View {
-        let working = coordinator.items.contains { $0.app.ipaURL == r.ipaURL && !$0.state.isFinal }
-        if working { SpinnerRing(size: 16, lineWidth: 2).frame(minWidth: 52) } else { Text(title) }
+        switch coordinator.item(for: r.signedApp)?.state {
+        case .some(let st) where st.isActive:
+            SpinnerRing(size: 16, lineWidth: 2).frame(minWidth: 52)
+        case .some(.ready):
+            Text("En cola")
+        default:
+            Text(title)
+        }
     }
 
-    /// Only one install queue at a time (the coordinator holds a single list of items).
-    private var busy: Bool {
-        coordinator.items.contains { !$0.state.isFinal }
-    }
+    /// Only one install queue at a time (the coordinator holds a single running queue).
+    private var busy: Bool { coordinator.isRunning }
 
     private func install(_ records: [AppRecord]) {
         guard !busy else { return }
@@ -230,14 +256,9 @@ struct AppsView: View {
         Task { @MainActor in
             await coordinator.installAll(apps)
             KeepAlive.shared.stop()
-            let failed = coordinator.items.filter { if case .failed = $0.state { return true } else { return false } }
-            if let f = failed.first {
-                toaster.show("\(f.app.job.displayName): \(f.state.label)", isError: true)
-                Haptics.error()
-            } else {
-                toaster.show(apps.count == 1 ? "\(apps[0].job.displayName) instalada" : "\(apps.count) apps instaladas")
-                Haptics.success()
-            }
+            let result = coordinator.summary(for: apps)
+            toaster.show(result.text, isError: result.isError)
+            if result.isError { Haptics.error() } else { Haptics.success() }
         }
     }
 }

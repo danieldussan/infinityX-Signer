@@ -94,10 +94,12 @@ struct ProgressOverlay: View {
         case .signing:
             SpinnerRing()
         case .signed:
-            if let s = installState(row), case .failed = s {
+            if let s = installState(row), s.isRetryable {
                 Image(systemName: "xmark").font(.system(size: 16, weight: .bold)).foregroundColor(Theme.red)
-            } else if let s = installState(row), !s.isFinal {
+            } else if let s = installState(row), s.isActive {
                 SpinnerRing()
+            } else if let s = installState(row), !s.isFinal {
+                Circle().fill(Theme.text3).frame(width: 10, height: 10)
             } else {
                 Image(systemName: "checkmark").font(.system(size: 16, weight: .bold)).foregroundColor(Theme.green)
             }
@@ -108,8 +110,7 @@ struct ProgressOverlay: View {
 
     private func isFailure(_ row: BatchRow) -> Bool {
         if case .failed = row.state { return true }
-        if let s = installState(row), case .failed = s { return true }
-        return false
+        return installState(row)?.isRetryable ?? false
     }
 
     private func metaText(_ row: BatchRow) -> String {
@@ -124,25 +125,28 @@ struct ProgressOverlay: View {
         }
     }
 
-    /// True once the install queue ran and every app installed (nothing left to retry).
-    private var allInstalled: Bool {
-        guard vm.installFinished else { return false }
-        return !coordinator.items.contains { item in
-            if case .failed = item.state { return true }
-            return false
-        }
-    }
+    /// Signed apps whose last install attempt failed or was cancelled.
+    private var retryCount: Int { coordinator.retryable(in: vm.signed).count }
+
+    /// True once the install queue ran and nothing is left to retry.
+    private var allInstalled: Bool { vm.installFinished && retryCount == 0 }
 
     private var actions: some View {
         VStack(spacing: 10) {
-            if !vm.signed.isEmpty && coordinator.mode != .export && !allInstalled {
-                Button {
-                    vm.install(coordinator: coordinator)
-                } label: {
-                    Text(vm.isInstalling ? "Instalando..." : (vm.installFinished ? "Reintentar instalación" : "Instalar \(vm.signed.count)"))
+            if vm.isInstalling {
+                Button(coordinator.cancelling ? "Cancelando..." : "Cancelar instalación") {
+                    coordinator.cancelAll()
                 }
-                .buttonStyle(CTAButtonStyle(enabled: !vm.isInstalling))
-                .disabled(vm.isInstalling)
+                .buttonStyle(GhostButtonStyle())
+                .disabled(coordinator.cancelling)
+            } else if !vm.signed.isEmpty && coordinator.mode != .export && !allInstalled {
+                Button {
+                    vm.install(coordinator: coordinator, toaster: toaster)
+                } label: {
+                    Text(vm.installFinished ? "Reintentar \(retryCount) fallida\(retryCount == 1 ? "" : "s")"
+                                            : "Instalar \(vm.signed.count)")
+                }
+                .buttonStyle(CTAButtonStyle(enabled: true))
             }
             if !vm.signed.isEmpty && !allInstalled {
                 Button("Exportar IPAs") {

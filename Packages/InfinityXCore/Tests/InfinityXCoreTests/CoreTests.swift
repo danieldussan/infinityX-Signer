@@ -278,3 +278,12 @@ final class IPAInfoTests: XCTestCase {
         XCTAssertNil(IPAInfo(infoPlist: Data("garbage".utf8), appFolderName: "Foo.app"))
     }
 }
+
+final class QueueSummaryTests: XCTestCase {
+    func testSummary() {
+        XCTAssertEqual(queueSummary([.completed, .completed, .failed, .cancelled]), "2 instaladas, 1 fallida, 1 cancelada")
+        XCTAssertEqual(queueSummary([.completed]), "1 instalada")
+        XCTAssertEqual(queueSummary([.failed, .failed]), "2 fallidas")
+        XCTAssertEqual(queueSummary([]), "")
+    }
+}

@@ -162,18 +162,21 @@ final class BatchViewModel: ObservableObject {
         }
     }
 
-    /// Runs the existing install queue for the signed apps (Semi Local / Local).
-    func install(coordinator: InstallCoordinator) {
+    /// Installs the signed apps; after a first run only the failed/cancelled ones are retried.
+    func install(coordinator: InstallCoordinator, toaster: Toaster) {
         guard !isRunning, !isInstalling, !signed.isEmpty else { return }
+        let apps = installFinished ? coordinator.retryable(in: signed) : signed
+        guard !apps.isEmpty else { return }
         isInstalling = true
         KeepAlive.shared.start()
-        let apps = signed
         Task { @MainActor [weak self] in
             await coordinator.installAll(apps)
             KeepAlive.shared.stop()
             self?.isInstalling = false
             self?.installFinished = true
-            Haptics.success()
+            let result = coordinator.summary(for: apps)
+            toaster.show(result.text, isError: result.isError)
+            if result.isError { Haptics.error() } else { Haptics.success() }
         }
     }
 
