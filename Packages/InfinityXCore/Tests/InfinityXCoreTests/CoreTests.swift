@@ -136,7 +136,7 @@ final class PlistEditorTests: XCTestCase {
 final class InstallTests: XCTestCase {
     func testURLs() {
         let ipa = URL(string: "http://127.0.0.1:4321/abc.ipa")!
-        let plist = genPlistURL(host: InstallConfig.defaultPlistHost, bundleID: "chip.21",
+        let plist = genPlistURL(host: URL(string: "https://api.palera.in")!, bundleID: "chip.21",
                                 name: "WAB 21", version: "2.24.1", ipaURL: ipa)
         XCTAssertEqual(plist.absoluteString,
             "https://api.palera.in/genPlist?bundleid=chip.21&name=WAB%2021&version=2.24.1&fetchurl=http%3A%2F%2F127.0.0.1%3A4321%2Fabc.ipa")

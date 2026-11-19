@@ -94,7 +94,9 @@ final class InstallCoordinator: ObservableObject {
     init() {
         let raw = UserDefaults.standard.string(forKey: "install.mode") ?? InstallMode.semiLocal.rawValue
         mode = InstallMode(rawValue: raw) ?? .semiLocal
-        plistHostText = UserDefaults.standard.string(forKey: "install.plistHost")
+        // The old default host (api.palera.in) is dead; a saved copy of it falls back to the new default.
+        let saved = UserDefaults.standard.string(forKey: "install.plistHost")
+        plistHostText = saved.flatMap { $0.contains("api.palera.in") ? nil : $0 }
             ?? InstallConfig.defaultPlistHost.absoluteString
     }
 

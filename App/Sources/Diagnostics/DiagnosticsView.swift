@@ -31,7 +31,7 @@ struct DiagnosticsView: View {
             GlassCard {
                 VStack(alignment: .leading, spacing: 8) {
                     SectionLabel("Servidor del plist")
-                    XField(placeholder: "https://api.palera.in", text: $coordinator.plistHostText, keyboard: .URL)
+                    XField(placeholder: InstallConfig.defaultPlistHost.absoluteString, text: $coordinator.plistHostText, keyboard: .URL)
                 }
             }
             .rise(3)

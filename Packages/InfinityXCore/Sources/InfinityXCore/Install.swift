@@ -5,7 +5,7 @@ public enum InstallMode: String, CaseIterable {
 }
 
 public struct InstallConfig {
-    public static let defaultPlistHost = URL(string: "https://api.palera.in")!
+    public static let defaultPlistHost = URL(string: "https://infinityx-production.up.railway.app")!
     public var mode: InstallMode
     public var plistHost: URL
     public init(mode: InstallMode = .semiLocal, plistHost: URL = InstallConfig.defaultPlistHost) {
