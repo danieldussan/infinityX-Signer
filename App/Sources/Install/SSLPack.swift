@@ -44,8 +44,14 @@ final class SSLPack: ObservableObject {
                 throw TLSIdentityError.message("Respuesta inesperada de backloop.dev")
             }
             let ca = (json["ca"] as? String) ?? ""
-            guard let der = PEM.blocks(cert).first?.data, DER.notAfter(ofCertificate: der) != nil else {
+            guard let der = PEM.blocks(cert).first?.data, let notAfter = DER.notAfter(ofCertificate: der) else {
                 throw TLSIdentityError.message("No se pudo leer el certificado del paquete")
+            }
+            // Refreshing cannot help when the publisher itself serves an expired cert: say so instead of "updated".
+            guard notAfter > Date() else {
+                let f = DateFormatter()
+                f.dateStyle = .medium
+                throw TLSIdentityError.message("backloop.dev aún publica un certificado vencido (venció el \(f.string(from: notAfter)))")
             }
             try (key1 + key2).write(to: dir.appendingPathComponent("server.pem"), atomically: true, encoding: .utf8)
             try cert.write(to: dir.appendingPathComponent("server.crt"), atomically: true, encoding: .utf8)
