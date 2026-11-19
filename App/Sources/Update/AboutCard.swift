@@ -26,6 +26,9 @@ struct AboutCard: View {
                 updateRow
                 updateResult
                 VStack(spacing: 8) {
+                    LinkRow(icon: "globe", title: "Instalar o actualizar desde la web",
+                            detail: "La forma más fácil: firma e instala la última versión desde Safari, sin importar el .ipa",
+                            url: AppInfo.webURL)
                     LinkRow(icon: "chevron.left.forwardslash.chevron.right", title: "Código fuente",
                             detail: "github.com/danieldussan/infinityX-Signer", url: AppInfo.repoURL)
                     LinkRow(icon: "shippingbox.fill", title: "Versiones", detail: "Descargas y novedades",
@@ -108,7 +111,7 @@ struct AboutCard: View {
                 }
                 Button { openURL(url) } label: { Text("Ver en GitHub") }
                     .buttonStyle(CTAButtonStyle(height: 48))
-                Text("Descarga el .ipa de la release, impórtalo en Apps › Importadas y fírmalo con tu certificado.")
+                Text("Lo más fácil: abre la web de Infinity X, firma la app con tu certificado e instálala desde Safari. También puedes descargar el .ipa de la release e importarlo en Apps › Importadas.")
                     .font(Theme.meta).foregroundColor(Theme.text3)
                     .fixedSize(horizontal: false, vertical: true)
             }

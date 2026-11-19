@@ -5,6 +5,7 @@ enum AppInfo {
     static let name = "Infinity X Signer"
     static let repoSlug = "danieldussan/infinityX-Signer"
     static let repoURL = URL(string: "https://github.com/danieldussan/infinityX-Signer")!
+    static let webURL = URL(string: "https://infinityx-production.up.railway.app")!
     static let releasesURL = URL(string: "https://github.com/danieldussan/infinityX-Signer/releases")!
     static let issuesURL = URL(string: "https://github.com/danieldussan/infinityX-Signer/issues")!
     static let latestReleaseAPI = URL(string: "https://api.github.com/repos/danieldussan/infinityX-Signer/releases/latest")!
