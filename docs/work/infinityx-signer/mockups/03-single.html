@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Firmar – Lotes vs Una app</title>
+<style>
+  :root { --bg:#000; --glass:rgb(255 255 255/.07); --line:rgb(255 255 255/.14); --text:#fff; --text2:rgb(255 255 255/.68); --text3:rgb(255 255 255/.42);
+    --blue:#2f7bff; --violet:#7a4bff; --indigo:#5b3bff; --orange:#ff7a2f; --green:#25d366; --amber:#ffb02e; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background:#0b0b0f; min-height:100vh; display:flex; gap:40px; justify-content:center; align-items:flex-start; flex-wrap:wrap; padding:32px 16px;
+    font-family:-apple-system,"SF Pro Display",system-ui,sans-serif; color:var(--text); }
+  figure { display:flex; flex-direction:column; align-items:center; gap:14px; }
+  figcaption { color:var(--text2); font-size:14px; }
+  .phone { position:relative; width:390px; height:844px; border-radius:54px; background:var(--bg); overflow:hidden; isolation:isolate;
+    box-shadow:0 0 0 10px #17171c,0 0 0 11px #2b2b33,0 40px 80px -20px rgb(0 0 0/.8); }
+  .phone::before { content:""; position:absolute; width:340px; height:340px; border-radius:50%; background:var(--blue); filter:blur(70px); opacity:.45; top:-120px; left:-130px; z-index:-1; }
+  .phone::after { content:""; position:absolute; width:300px; height:300px; border-radius:50%; background:var(--orange); filter:blur(70px); opacity:.35; bottom:40px; right:-140px; z-index:-1; }
+  .island { position:absolute; top:11px; left:50%; width:120px; height:34px; margin-left:-60px; background:#000; border-radius:20px; }
+  .screen { position:absolute; inset:0; padding:62px 18px 110px; display:flex; flex-direction:column; gap:14px; overflow:hidden; }
+  h1 { font-size:30px; font-weight:800; letter-spacing:-.02em; }
+  .sub { color:var(--text2); font-size:14px; margin-top:-8px; }
+  .head { display:flex; justify-content:space-between; align-items:center; }
+  .chip { font-size:12px; font-weight:700; padding:5px 10px; border-radius:99px; background:rgb(37 211 102/.15); color:var(--green); border:1px solid rgb(37 211 102/.4); }
+  .seg { display:flex; padding:3px; border-radius:14px; background:rgb(0 0 0/.35); border:1px solid var(--line); }
+  .seg span { flex:1; text-align:center; padding:9px 0; font-size:14px; font-weight:600; color:var(--text2); border-radius:11px; }
+  .seg span.on { color:#fff; background:linear-gradient(135deg,var(--blue),var(--indigo)); }
+  .steps { display:flex; gap:8px; }
+  .step { flex:1; display:flex; gap:7px; align-items:center; padding:10px; border-radius:14px; background:var(--glass); border:1px solid var(--line); font-size:12.5px; font-weight:600; }
+  .dot { width:20px; height:20px; border-radius:50%; background:var(--green); color:#000; font-size:11px; font-weight:800; display:grid; place-items:center; }
+  .card { padding:16px; border-radius:22px; background:var(--glass); border:1px solid var(--line); display:flex; flex-direction:column; gap:10px; }
+  .lbl { font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--text3); font-weight:700; }
+  .field { padding:13px 14px; border-radius:14px; background:rgb(0 0 0/.35); border:1px solid var(--line); font-size:16px; }
+  .field.edited { border-color:var(--blue); }
+  .hint { font-size:12px; color:var(--text3); margin-top:-4px; }
+  .tags { display:flex; gap:8px; flex-wrap:wrap; }
+  .tag { padding:6px 10px; border-radius:99px; font-size:12.5px; background:linear-gradient(135deg,rgb(47 123 255/.4),rgb(255 122 47/.25)); }
+  .tag small { color:var(--text2); margin-left:4px; }
+  .row { display:flex; gap:10px; }
+  .row > div { flex:1; display:flex; flex-direction:column; gap:8px; }
+  .switch { display:flex; justify-content:space-between; align-items:center; }
+  .switch b { font-size:15px; display:block; } .switch small { color:var(--text2); font-size:12px; }
+  .tgl { width:48px; height:28px; border-radius:99px; background:rgb(255 255 255/.18); position:relative; }
+  .tgl::after { content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:#fff; }
+  .cta { margin-top:2px; padding:17px; border-radius:20px; text-align:center; font-weight:700; font-size:17px; background:linear-gradient(90deg,var(--blue),var(--violet),var(--orange)); }
+  .tabbar { position:absolute; left:18px; right:18px; bottom:22px; height:64px; border-radius:32px; background:rgb(22 24 30/.72); border:1px solid var(--line);
+    display:flex; justify-content:space-around; align-items:center; font-size:11px; color:var(--text3); }
+  .tabbar .on { color:#fff; font-weight:700; }
+  .pick { display:flex; justify-content:space-between; align-items:center; padding:6px 0; gap:12px; }
+  .pick b { font-size:15px; display:block; } .pick small { color:var(--text3); font-size:12px; }
+  .radio { width:22px; height:22px; border-radius:50%; border:2px solid var(--line); flex:none; }
+  .radio.on { border-color:var(--green); background:radial-gradient(circle,var(--green) 45%,transparent 50%); }
+  .ico { width:44px; height:44px; border-radius:14px; flex:none; background:linear-gradient(135deg,rgb(47 123 255/.35),rgb(255 122 47/.25)); border:1px solid var(--line); }
+  .sel { display:flex; align-items:center; gap:12px; } .sel b { font-size:16px; display:block; } .sel small { color:var(--text2); font-size:12.5px; }
+  .sel .chev { margin-left:auto; color:var(--text3); font-size:14px; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:150px; background:#0d0e12; border-radius:28px 28px 0 0; border:1px solid var(--line); padding:10px 18px 0; display:flex; flex-direction:column; gap:12px; box-shadow:0 -20px 60px rgb(0 0 0/.6); }
+  .scrim { position:absolute; inset:0; background:rgb(0 0 0/.55); }
+  .grab { width:40px; height:5px; border-radius:3px; background:rgb(255 255 255/.3); margin:0 auto; }
+  .sheet h2 { font-size:22px; } .sheet .head small { font-size:13px; font-weight:600; padding:6px 12px; border-radius:99px; background:var(--glass); border:1px solid var(--line); }
+  .list .pick { padding:12px 0; border-bottom:1px solid var(--line); min-height:56px; } .list .pick em { display:block; font-style:normal; color:var(--text3); font-size:12px; }
+  .list .pick small { font-size:12.5px; color:var(--text2); }
+</style>
+</head>
+<body>
+<figure>
+  <div class="phone"><div class="island"></div><div class="screen">
+    <div class="head"><h1>Firmar por lotes</h1><span class="chip">Listo</span></div>
+    <p class="sub">Genera WhatsApps con nombre y bundle consecutivos.</p>
+    <div class="seg"><span class="on">Lotes</span><span>Una app</span></div>
+    <div class="steps"><div class="step"><i class="dot">✓</i>Cert</div><div class="step"><i class="dot">✓</i>Perfil</div><div class="step"><i class="dot">✓</i>IPA</div></div>
+    <div class="card"><span class="lbl">Modo</span>
+      <div class="seg"><span class="on">Rango</span><span>Siguientes</span></div>
+      <div class="field">21-25</div>
+      <div class="tags"><span class="tag">WAB 21<small>chip.21</small></span><span class="tag">WAB 22<small>chip.22</small></span><span class="tag">+3 más</span></div></div>
+    <div class="card"><div class="row"><div><span class="lbl">Prefijo de nombre</span><div class="field">WAB</div></div><div><span class="lbl">Prefijo de bundle</span><div class="field">chip</div></div></div>
+      <div class="switch"><span><b>Quitar extensiones</b><small>Elimina PlugIns/Extensions</small></span><i class="tgl"></i></div></div>
+    <div class="cta">Firmar 5 apps</div>
+  </div><div class="tabbar"><span>Certificado</span><span>Apps</span><span class="on">Firmar</span><span>Ajustes</span></div></di<figure>
+  <div class="phone"><div class="island"></div><div class="screen">
+    <div class="head"><h1>Firmar por lotes</h1><span class="chip">Listo</span></div>
+    <p class="sub">Genera WhatsApps con nombre y bundle consecutivos.</p>
+    <div class="seg"><span class="on">Lotes</span><span>Una app</span></div>
+    <div class="steps"><div class="step"><i class="dot">✓</i>Cert</div><div class="step"><i class="dot">✓</i>Perfil</div><div class="step"><i class="dot">✓</i>IPA</div></div>
+    <div class="card"><span class="lbl">IPA a firmar</span>
+      <div class="sel"><i class="ico"></i><span><b>WhatsApp</b><small>12 IPAs importadas · toca para cambiar</small></span><span class="chev">⌃⌄</span></div></div>
+    <div class="card"><span class="lbl">Modo</span>
+      <div class="seg"><span class="on">Rango</span><span>Siguientes</span></div>
+      <div class="field">21-25</div>
+      <div class="tags"><span class="tag">WAB 21<small>chip.21</small></span><span class="tag">WAB 22<small>chip.22</small></span><span class="tag">+3 más</span></div></div>
+    <div class="cta">Firmar 5 apps</div>
+  </div><div class="tabbar"><span>Certificado</span><span>Apps</span><span class="on">Firmar</span><span>Ajustes</span></div></div>
+  <figcaption>Lotes con 2+ IPAs: una sola fila compacta (igual con 3 o 300)</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="island"></div><div class="screen">
+    <div class="head"><h1>Firmar por lotes</h1></div></div>
+    <div class="scrim"></div>
+    <div class="sheet"><i class="grab"></i>
+      <div class="head"><h2>Elige la IPA</h2><small>Listo</small></div>
+      <div class="field" style="color:var(--text3)">🔍 Buscar por nombre</div>
+      <div class="list">
+        <div class="pick"><span><b>WhatsApp</b><small>v2.24.10 · 168 MB</small><em>WhatsApp-2.24.10.ipa</em></span><i class="radio on"></i></div>
+        <div class="pick"><span><b>WhatsApp Business</b><small>v2.24.9 · 142 MB</small><em>WABusiness-2.24.9.ipa</em></span><i class="radio"></i></div>
+        <div class="pick"><span><b>WhatsApp + Watusi</b><small>v2.24.8 · 171 MB</small><em>WA-watusi.ipa</em></span><i class="radio"></i></div>
+        <div class="pick"><span><b>Instagram</b><small>v330.0 · 210 MB</small><em>Instagram-330.ipa</em></span><i class="radio"></i></div>
+      </div></div>
+  </div>
+  <figcaption>Al tocar la fila: hoja con buscador (solo si hay más de 6), versión y tamaño</figcaption>
+</figure>
+class="chip">Listo</span></div>
+    <p class="sub">Una sola app con su nombre y bundle.</p>
+    <div class="seg"><span>Lotes</span><span class="on">Una app</span></div>
+    <div class="steps"><div class="step"><i class="dot">✓</i>Cert</div><div class="step"><i class="dot">✓</i>Perfil</div><div class="step"><i class="dot">✓</i>IPA</div></div>
+    <div class="card"><span class="lbl">IPA a firmar</span>
+      <div class="pick"><span><b>WhatsApp</b><small>WhatsApp-2.24.10.ipa</small></span><i class="radio on"></i></div>
+      <div class="pick"><span><b>WhatsApp Business</b><small>WABusiness-2.24.9.ipa</small></span><i class="radio"></i></div>
+      <div class="pick"><span><b>Instagram</b><small>Instagram-330.ipa</small></span><i class="radio"></i></div></div>
+    <div class="card"><span class="lbl">Nombre</span><div class="field">WhatsApp</div>
+      <span class="lbl" style="margin-top:4px">Bundle ID</span><div class="field">net.whatsapp.WhatsApp</div></div>
+    <div class="cta">Firmar app</div>
+  </div><div class="tabbar"><span>Certificado</span><span>Apps</span><span class="on">Firmar</span><span>Ajustes</span></div></div>
+  <figcaption>Con 2+ IPAs aparece "IPA a firmar" (con una sola no se muestra)</figcaption>
+</figure>
+</body>
+</html>
