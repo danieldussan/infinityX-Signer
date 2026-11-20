@@ -36,6 +36,11 @@ final class BatchViewModel: ObservableObject {
         didSet { UserDefaults.standard.set(bundlePrefix, forKey: "batch.bundle") }
     }
     @Published var mode: BatchMode = .range
+    /// "Una app" tab: one app with its own name/bundle (defaults come from the IPA, editable).
+    @Published var isSingle = false
+    @Published var singleName = ""
+    @Published var singleBundle = ""
+    private var singleSource: String?
     @Published var numbersText = ""
     @Published var count = 3
     @Published var stripPlugins = false
@@ -63,7 +68,25 @@ final class BatchViewModel: ObservableObject {
     private var trimmedNamePrefix: String { namePrefix.trimmingCharacters(in: .whitespaces) }
     private var trimmedBundlePrefix: String { bundlePrefix.trimmingCharacters(in: .whitespaces) }
 
+    /// Fills name/bundle from the selected IPA; re-fills only when the IPA changes, so user edits survive.
+    func prefillSingle(imports: ImportStore) {
+        guard let ipa = imports.selectedName(.ipa), ipa != singleSource,
+              let info = imports.ipaInfo[ipa] else { return }
+        singleSource = ipa
+        singleName = info.displayName
+        singleBundle = info.bundleID
+    }
+
     func preview() -> BatchPreview {
+        if isSingle {
+            let name = singleName.trimmingCharacters(in: .whitespaces)
+            let bundle = singleBundle.trimmingCharacters(in: .whitespaces)
+            if name.isEmpty || bundle.isEmpty { return BatchPreview(jobs: [], error: nil) }
+            // ponytail: number 0 = no counter; file name from the bundle id keeps single signs apart from batch files.
+            let safe = bundle.map { $0.isLetter || $0.isNumber || $0 == "." || $0 == "-" ? $0 : "_" }
+            return BatchPreview(jobs: [SigningJob(number: 0, displayName: name, bundleID: bundle,
+                                                  outputFileName: "WA-\(String(safe))-signed.ipa")], error: nil)
+        }
         let input: BatchInput
         switch mode {
         case .range:
@@ -98,6 +121,12 @@ final class BatchViewModel: ObservableObject {
             let when = profile.expirationDate.map { " el \(Fmt.date($0))" } ?? ""
             return SignGate(title: "Perfil vencido",
                             reason: "El perfil venció\(when). Importa uno nuevo en la pestaña Certificado.", enabled: false)
+        }
+        if isSingle {
+            if preview().jobs.isEmpty {
+                return SignGate(title: "Faltan datos", reason: "Escribe el nombre y el bundle de la app.", enabled: false)
+            }
+            return SignGate(title: "Firmar app", reason: nil, enabled: true)
         }
         if trimmedBundlePrefix.isEmpty || trimmedNamePrefix.isEmpty {
             return SignGate(title: "Faltan prefijos", reason: "Escribe el prefijo de nombre y el de bundle.", enabled: false)

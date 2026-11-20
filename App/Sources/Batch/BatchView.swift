@@ -14,13 +14,21 @@ struct BatchView: View {
         let preview = vm.preview()
         let gate = vm.gate(imports: imports)
 
-        XScreen(title: "Firmar por lotes",
-                subtitle: "Genera WhatsApps con nombre y bundle consecutivos.",
+        XScreen(title: vm.isSingle ? "Firmar una app" : "Firmar por lotes",
+                subtitle: vm.isSingle ? "Una sola app con su nombre y bundle." : "Genera WhatsApps con nombre y bundle consecutivos.",
                 showSubtitleLogo: true,
                 accessory: { StatusChip(text: gate.enabled ? "Listo" : "Pendiente", color: gate.enabled ? Theme.green : nil) }) {
+            XSegmented(options: ["Lotes", "Una app"], selection: Binding(
+                get: { vm.isSingle ? 1 : 0 }, set: { vm.isSingle = $0 == 1 })).rise(1)
             checklist.rise(2)
-            modeCard(preview).rise(3)
-            prefixCard.rise(4)
+            if (imports.names[.ipa] ?? []).count > 1 { IPASelector().rise(2) }
+            if vm.isSingle {
+                singleCard.rise(3)
+                optionsCard.rise(4)
+            } else {
+                modeCard(preview).rise(3)
+                prefixCard.rise(4)
+            }
             VStack(spacing: 10) {
                 Button {
                     vm.start(imports: imports, log: log, library: library)
@@ -49,7 +57,9 @@ struct BatchView: View {
             }
             .rise(5)
         }
-        .onAppear { vm.refreshCounter() }
+        .onAppear { vm.refreshCounter(); vm.prefillSingle(imports: imports) }
+        .onChange(of: imports.selectedName(.ipa)) { _ in vm.prefillSingle(imports: imports) }
+        .onChange(of: imports.ipaInfo.count) { _ in vm.prefillSingle(imports: imports) }
     }
 
     // MARK: Checklist
@@ -148,15 +158,34 @@ struct BatchView: View {
                         XField(placeholder: "chip", text: $vm.bundlePrefix)
                     }
                 }
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Quitar extensiones").font(.system(size: 15, weight: .semibold)).foregroundColor(Theme.text)
-                        Text("Elimina PlugIns/Extensions").font(Theme.meta).foregroundColor(Theme.text2)
-                    }
-                    Spacer()
-                    XSwitch(isOn: $vm.stripPlugins)
-                }
+                stripRow
             }
         }
+    }
+
+    private var stripRow: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Quitar extensiones").font(.system(size: 15, weight: .semibold)).foregroundColor(Theme.text)
+                Text("Elimina PlugIns/Extensions").font(Theme.meta).foregroundColor(Theme.text2)
+            }
+            Spacer()
+            XSwitch(isOn: $vm.stripPlugins)
+        }
+    }
+
+    private var singleCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionLabel("Nombre")
+                XField(placeholder: "WhatsApp", text: $vm.singleName)
+                SectionLabel("Bundle ID")
+                XField(placeholder: "com.example.app", text: $vm.singleBundle)
+            }
+        }
+    }
+
+    private var optionsCard: some View {
+        GlassCard { stripRow }
     }
 }
