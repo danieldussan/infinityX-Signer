@@ -83,6 +83,16 @@ struct ContentView: View {
         }
         .animation(Theme.spring, value: batch.showOverlay)
         .preferredColorScheme(.dark)
+        .onOpenURL { url in
+            Task {
+                do {
+                    try await imports.importFromWeb(url)
+                    withAnimation(Theme.spring) { tab = 0 }
+                } catch {
+                    toaster.show(error.localizedDescription, isError: true)
+                }
+            }
+        }
         .task {
             imports.onFinished = { [weak toaster, weak log] job, result in
                 switch result {

@@ -55,6 +55,9 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIBackgroundModes: [audio]
+        CFBundleURLTypes:
+          - CFBundleURLName: com.infinityx.signer
+            CFBundleURLSchemes: [infinityx]
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
         NSLocalNetworkUsageDescription: Infinity X Signer sirve el IPA firmado en tu propio dispositivo para instalarlo.
