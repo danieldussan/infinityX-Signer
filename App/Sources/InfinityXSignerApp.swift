@@ -9,6 +9,7 @@ struct InfinityXSignerApp: App {
     @StateObject private var library = AppLibrary()
     @StateObject private var updater = UpdateChecker()
     @StateObject private var sources = SourceStore()
+    @StateObject private var details = DetailsStore()
 
     var body: some Scene {
         WindowGroup {
@@ -21,6 +22,7 @@ struct InfinityXSignerApp: App {
                 .environmentObject(library)
                 .environmentObject(updater)
                 .environmentObject(sources)
+                .environmentObject(details)
         }
     }
 }

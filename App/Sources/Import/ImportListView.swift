@@ -9,6 +9,10 @@ struct ImportFileRow: View {
     var green = false
     /// Replaces the file name as the bold title (e.g. the app name read from an IPA).
     var title: String?
+    /// IPA to show the real app icon from.
+    var iconURL: URL?
+    /// Adds an info button that opens the app details.
+    var onInfo: (() -> Void)?
     @EnvironmentObject var store: ImportStore
 
     var body: some View {
@@ -19,7 +23,11 @@ struct ImportFileRow: View {
                 store.select(name, kind: kind)
             } label: {
                 HStack(spacing: 12) {
-                    IconBox(systemName: icon, green: green)
+                    if let iconURL {
+                        AppIconView(url: iconURL)
+                    } else {
+                        IconBox(systemName: icon, green: green)
+                    }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title ?? name).font(Theme.name).foregroundColor(Theme.text).lineLimit(1).truncationMode(.middle)
                         Text(meta).font(Theme.meta).foregroundColor(Theme.text2).lineLimit(2)
@@ -33,6 +41,14 @@ struct ImportFileRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(PressScaleStyle(scale: 0.98))
+            if let onInfo {
+                Button(action: onInfo) {
+                    Image(systemName: "info.circle").font(.system(size: 17)).foregroundColor(Theme.text2)
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Información de \(name)")
+            }
             Button {
                 withAnimation(Theme.spring) { store.delete(name, kind: kind) }
             } label: {

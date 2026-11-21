@@ -22,6 +22,8 @@ struct SigningRequest {
     let profileURL: URL
     let password: String
     let stripPlugins: Bool
+    var iconPNG: Data? = nil
+    var removeAlternateIcons = false
 }
 
 enum SigningError: LocalizedError {
@@ -94,6 +96,9 @@ final class SigningEngine {
         try PlistEditor.setName(appDir: appCopy, name: job.displayName, cleanLocalized: true)
         try AppPlist.setBundleID(appDir: appCopy, bundleID: job.bundleID)
         if request.stripPlugins { try PlistEditor.stripPlugins(appDir: appCopy) }
+        if request.iconPNG != nil || request.removeAlternateIcons {
+            try AppIcons.apply(appDir: appCopy, png: request.iconPNG, removeAlternates: request.removeAlternateIcons)
+        }
 
         let flag = Flag()
         let returned = Zsign.sign(

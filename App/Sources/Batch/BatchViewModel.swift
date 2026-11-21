@@ -165,6 +165,7 @@ final class BatchViewModel: ObservableObject {
             return
         }
         let jobs = p.jobs
+        let certSnapshot = imports.profile.map { CertSnapshot(certificateFile: certName, profile: $0) }
 
         let request = SigningRequest(ipaURL: ipa, p12URL: p12, profileURL: profile,
                                      password: KeychainStore.password(for: certName) ?? "",
@@ -183,7 +184,7 @@ final class BatchViewModel: ObservableObject {
             }
             self.signed = result
             // Keep every signed app in Apps > Firmadas, even if the overlay is closed without installing.
-            library.add(result)
+            library.add(result, cert: certSnapshot)
             self.refreshCounter()
             KeepAlive.shared.stop()
             self.isRunning = false

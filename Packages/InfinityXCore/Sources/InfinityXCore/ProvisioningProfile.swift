@@ -14,6 +14,7 @@ public enum ProfileError: Error, Equatable {
 /// Parsed contents of a .mobileprovision (CMS wrapper around an XML plist).
 public struct ProvisioningProfile: Equatable {
     public var name: String
+    public var uuid: String
     public var teamName: String
     public var teamID: String
     public var appIDName: String
@@ -49,6 +50,7 @@ public struct ProvisioningProfile: Equatable {
             appID = String(appID[appID.index(after: dot)...])
         }
         self.name = dict["Name"] as? String ?? ""
+        self.uuid = dict["UUID"] as? String ?? ""
         self.teamName = dict["TeamName"] as? String ?? ""
         self.teamID = teamID
         self.appIDName = dict["AppIDName"] as? String ?? ""

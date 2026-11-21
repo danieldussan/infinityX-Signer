@@ -11,6 +11,8 @@ struct AppRecord: Codable, Identifiable, Equatable {
     var signedAt: Date
     var installedAt: Date?
     var version: String?
+    /// Certificate/profile used to sign it; nil for records saved before this was tracked.
+    var cert: CertSnapshot?
 
     var ipaURL: URL { AppPaths.signed.appendingPathComponent(ipaFileName) }
     var fileExists: Bool { FileManager.default.fileExists(atPath: ipaURL.path) }
@@ -46,6 +48,12 @@ final class AppLibrary: ObservableObject {
         records.filter { $0.installedAt != nil }.sorted { ($0.installedAt ?? .distantPast) > ($1.installedAt ?? .distantPast) }
     }
 
+    /// Apps whose certificate is expired or expires within a week, soonest first.
+    var needingAttention: [AppRecord] {
+        records.filter { ($0.cert?.status() ?? .valid) != .valid }
+            .sorted { ($0.cert?.expiresAt ?? .distantFuture) < ($1.cert?.expiresAt ?? .distantFuture) }
+    }
+
     /// Drops "Firmadas" records whose file is gone. Installed history stays even without the file.
     func reconcile() {
         let kept = records.filter { $0.installedAt != nil || $0.fileExists }
@@ -56,7 +64,7 @@ final class AppLibrary: ObservableObject {
     }
 
     /// Adds the apps of a finished sign run, replacing records with the same bundle id or file name.
-    func add(_ apps: [SignedApp]) {
+    func add(_ apps: [SignedApp], cert: CertSnapshot? = nil) {
         let now = Date()
         for app in apps {
             let name = app.ipaURL.lastPathComponent
@@ -64,9 +72,10 @@ final class AppLibrary: ObservableObject {
             records.removeAll { $0.ipaFileName == name || $0.bundleID == app.job.bundleID }
             records.append(AppRecord(id: UUID().uuidString, name: app.job.displayName, bundleID: app.job.bundleID,
                                      ipaFileName: name, sizeBytes: size, signedAt: now, installedAt: nil,
-                                     version: app.version))
+                                     version: app.version, cert: cert))
         }
         save()
+        ExpiryAlerts.reschedule(for: records)
     }
 
     /// Called by the install coordinator when an item completes.
@@ -82,6 +91,7 @@ final class AppLibrary: ObservableObject {
         try? FileManager.default.removeItem(at: record.ipaURL)
         records.removeAll { $0.id == record.id }
         save()
+        ExpiryAlerts.reschedule(for: records)
     }
 
     private func save() {

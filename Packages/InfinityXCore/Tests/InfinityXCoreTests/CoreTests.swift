@@ -287,3 +287,131 @@ final class QueueSummaryTests: XCTestCase {
         XCTAssertEqual(queueSummary([]), "")
     }
 }
+
+final class AppDetailsTests: XCTestCase {
+    private func plist(_ dict: [String: Any]) throws -> Data {
+        try PropertyListSerialization.data(fromPropertyList: dict, format: .binary, options: 0)
+    }
+
+    func testDetailsFromInfoPlist() throws {
+        let dict: [String: Any] = [
+            "CFBundleIdentifier": "a.b", "CFBundleName": "App", "CFBundleShortVersionString": "1.2",
+            "CFBundleVersion": "34", "MinimumOSVersion": "15.0", "CFBundleExecutable": "App",
+            "NSCameraUsageDescription": "x", "NSMicrophoneUsageDescription": "y", "Other": 1,
+            "CFBundleIcons": [
+                "CFBundlePrimaryIcon": ["CFBundleIconFiles": ["AppIcon60x60"], "CFBundleIconName": "AppIcon"],
+                "CFBundleAlternateIcons": ["Dark": ["CFBundleIconFiles": ["Dark60x60"]]],
+            ],
+        ]
+        let d = try XCTUnwrap(AppDetails(infoPlist: try plist(dict), appFolderName: "App.app"))
+        XCTAssertEqual(d.build, "34")
+        XCTAssertEqual(d.minOS, "15.0")
+        XCTAssertEqual(d.permissions, ["NSCameraUsageDescription", "NSMicrophoneUsageDescription"])
+        XCTAssertEqual(d.primaryIconFiles, ["AppIcon60x60", "AppIcon"])
+        XCTAssertEqual(d.alternateIcons, [AlternateIcon(name: "Dark", files: ["Dark60x60"])])
+    }
+
+    func testPickIconFilePrefersLargest() {
+        let files: [(name: String, size: UInt64)] = [("AppIcon60x60@2x.png", 100), ("AppIcon60x60@3x.png", 250),
+                                                     ("Other@3x.png", 999), ("AppIcon60x60.txt", 5000)]
+        XCTAssertEqual(IconNames.pickFile(bases: ["AppIcon60x60"], from: files), "AppIcon60x60@3x.png")
+        XCTAssertNil(IconNames.pickFile(bases: ["Missing"], from: files))
+        XCTAssertEqual(IconNames.pickFile(bases: ["AppIcon60x60@2x.png"], from: files), "AppIcon60x60@3x.png")
+    }
+
+    func testMachOThin() {
+        func le(_ v: UInt32) -> [UInt8] { [UInt8(v & 255), UInt8(v >> 8 & 255), UInt8(v >> 16 & 255), UInt8(v >> 24)] }
+        func dylibCmd(_ cmd: UInt32, _ path: String) -> [UInt8] {
+            var name = Array(path.utf8) + [0]
+            while (24 + name.count) % 8 != 0 { name.append(0) }
+            return le(cmd) + le(UInt32(24 + name.count)) + le(24) + le(0) + le(0) + le(0) + name
+        }
+        let cmds = dylibCmd(0xC, "/usr/lib/libSystem.B.dylib") + dylibCmd(0x80000018, "@rpath/Tweak.dylib")
+            + le(0x19) + le(8)
+        let header = le(0xFEEDFACF) + le(0x0100000C) + le(0) + le(2) + le(3) + le(UInt32(cmds.count)) + le(0) + le(0)
+        let libs = MachO.dylibs(in: Data(header + cmds))
+        XCTAssertEqual(libs, ["/usr/lib/libSystem.B.dylib", "@rpath/Tweak.dylib"])
+        XCTAssertTrue(MachO.isSystem(libs[0]))
+        XCTAssertFalse(MachO.isSystem(libs[1]))
+        XCTAssertEqual(MachO.dylibs(in: Data("garbage!".utf8)), [])
+        XCTAssertEqual(MachO.dylibs(in: Data(header + cmds.prefix(10))), [])
+    }
+
+    func testMachOFat() {
+        func le(_ v: UInt32) -> [UInt8] { [UInt8(v & 255), UInt8(v >> 8 & 255), UInt8(v >> 16 & 255), UInt8(v >> 24)] }
+        func be(_ v: UInt32) -> [UInt8] { le(v).reversed() }
+        let name = Array("@rpath/A.dylib".utf8) + [0, 0]
+        let cmd = le(0xC) + le(UInt32(24 + name.count)) + le(24) + le(0) + le(0) + le(0) + name
+        let thin = le(0xFEEDFACF) + le(0) + le(0) + le(2) + le(1) + le(UInt32(cmd.count)) + le(0) + le(0) + cmd
+        let fat = be(0xCAFEBABE) + be(1) + be(0x0100000C) + be(0) + be(32) + be(UInt32(thin.count)) + be(14)
+            + [UInt8](repeating: 0, count: 4) + thin
+        XCTAssertEqual(MachO.dylibs(in: Data(fat)), ["@rpath/A.dylib"])
+    }
+}
+
+final class IconEditorTests: XCTestCase {
+    func testSetPrimaryIcon() {
+        let dict: [String: Any] = [
+            "CFBundleIconFile": "old.png",
+            "CFBundleIcons": ["CFBundlePrimaryIcon": ["CFBundleIconFiles": ["X"], "CFBundleIconName": "AppIcon"]],
+        ]
+        let out = IconEditor.settingPrimaryIcon(dict)
+        let primary = (out["CFBundleIcons"] as? [String: Any])?["CFBundlePrimaryIcon"] as? [String: Any]
+        XCTAssertEqual(primary?["CFBundleIconFiles"] as? [String], ["IXIcon60x60"])
+        XCTAssertNil(primary?["CFBundleIconName"])
+        XCTAssertNil(out["CFBundleIconFile"])
+        XCTAssertNil(out["CFBundleIcons~ipad"])
+    }
+
+    func testSetPrimaryIconCreatesAndKeepsIPad() {
+        let out = IconEditor.settingPrimaryIcon(["CFBundleIcons~ipad": ["CFBundleAlternateIcons": ["A": [:]]]])
+        XCTAssertNotNil(out["CFBundleIcons"])
+        let pad = (out["CFBundleIcons~ipad"] as? [String: Any])?["CFBundlePrimaryIcon"] as? [String: Any]
+        XCTAssertEqual(pad?["CFBundleIconFiles"] as? [String], ["IXIcon76x76", "IXIcon83.5x83.5"])
+    }
+
+    func testRemoveAlternates() {
+        let dict: [String: Any] = ["CFBundleIcons": [
+            "CFBundlePrimaryIcon": ["CFBundleIconFiles": ["P"]],
+            "CFBundleAlternateIcons": ["Dark": ["CFBundleIconFiles": ["Dark60x60"]]],
+        ]]
+        let (out, bases) = IconEditor.removingAlternateIcons(dict)
+        XCTAssertEqual(bases, ["Dark60x60"])
+        let icons = out["CFBundleIcons"] as? [String: Any]
+        XCTAssertNil(icons?["CFBundleAlternateIcons"])
+        XCTAssertNotNil(icons?["CFBundlePrimaryIcon"])
+    }
+}
+
+final class CertSnapshotTests: XCTestCase {
+    func testStatusAndDays() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        func snap(_ exp: Date?) -> CertSnapshot {
+            var s = CertSnapshot(certificateFile: "a.p12", profile: emptyProfile())
+            s.expiresAt = exp
+            return s
+        }
+        XCTAssertEqual(snap(now.addingTimeInterval(309 * 86_400)).daysRemaining(now: now), 309)
+        XCTAssertEqual(snap(now.addingTimeInterval(309 * 86_400)).status(now: now), .valid)
+        XCTAssertEqual(snap(now.addingTimeInterval(3 * 86_400)).status(now: now), .expiringSoon)
+        XCTAssertEqual(snap(now.addingTimeInterval(-1)).status(now: now), .expired)
+        XCTAssertNil(snap(nil).daysRemaining(now: now))
+    }
+
+    func testReminders() {
+        let now = Date(timeIntervalSince1970: 0)
+        let far = now.addingTimeInterval(30 * 86_400)
+        XCTAssertEqual(expiryReminders(expiry: far, now: now).map { $0.daysBefore }, [7, 1])
+        let soon = now.addingTimeInterval(3 * 86_400)
+        XCTAssertEqual(expiryReminders(expiry: soon, now: now).map { $0.daysBefore }, [1])
+        XCTAssertTrue(expiryReminders(expiry: now.addingTimeInterval(3600), now: now).isEmpty)
+    }
+
+    private func emptyProfile() -> ProvisioningProfile {
+        let xml = """
+        <?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>Name</key><string>P</string>\
+        <key>UUID</key><string>U-1</string></dict></plist>
+        """
+        return try! ProvisioningProfile(data: Data(xml.utf8))
+    }
+}
