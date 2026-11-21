@@ -13,10 +13,11 @@ struct ContentView: View {
     // The batch state lives here so it survives tab switches (screens are re-created for the entrance animation).
     @StateObject private var batch = BatchViewModel()
     @State private var tab = 2
+    @State private var importSection = 0
 
     private var tabs: [TabItem] {
         [
-            TabItem(title: "Certificado", systemImage: "key.fill"),
+            TabItem(title: "Importar", systemImage: "square.and.arrow.down.fill"),
             TabItem(title: "Apps", systemImage: "square.stack.3d.up.fill"),
             TabItem(title: "Firmar", systemImage: "signature"),
             TabItem(title: "Ajustes", systemImage: "gearshape.fill", badge: updater.badgeVisible),
@@ -30,7 +31,7 @@ struct ContentView: View {
             ZStack {
                 switch tab {
                 case 0:
-                    CertificatesView(batch: batch).transition(screenTransition)
+                    ImportTab(batch: batch, section: $importSection).transition(screenTransition)
                 case 1:
                     AppsView().transition(screenTransition)
                 case 2:
@@ -87,7 +88,7 @@ struct ContentView: View {
             Task {
                 do {
                     try await imports.importFromWeb(url)
-                    withAnimation(Theme.spring) { tab = 0 }
+                    withAnimation(Theme.spring) { importSection = 0; tab = 0 }
                 } catch {
                     toaster.show(error.localizedDescription, isError: true)
                 }

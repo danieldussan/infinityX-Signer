@@ -2,9 +2,10 @@ import SwiftUI
 import UIKit
 import InfinityXCore
 
-/// "Certificado" tab: .p12 + password check, and the .mobileprovision details.
+/// "Importar > Certificado": .p12 + password check, and the .mobileprovision details.
 struct CertificatesView: View {
     @ObservedObject var batch: BatchViewModel
+    @Binding var section: Int
     @EnvironmentObject var store: ImportStore
     @EnvironmentObject var toaster: Toaster
     @StateObject private var checker = CertChecker()
@@ -14,9 +15,10 @@ struct CertificatesView: View {
     @State private var showDevices = false
 
     var body: some View {
-        XScreen(title: "Certificado",
+        XScreen(title: "Importar",
                 subtitle: "Importa tu .p12 y el perfil .mobileprovision.",
                 accessory: { headerChip }) {
+            XSegmented(options: ["Certificado", "Fuentes"], selection: $section).rise(1)
             certCard.rise(2)
             // Import cards only show when nothing is imported yet; delete the file (trash) to import another.
             if (store.names[.certificate] ?? []).isEmpty {

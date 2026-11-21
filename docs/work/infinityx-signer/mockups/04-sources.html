@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apps – Fuentes</title>
+<style>
+  :root { --bg:#000; --glass:rgb(255 255 255/.07); --line:rgb(255 255 255/.14); --text:#fff; --text2:rgb(255 255 255/.68); --text3:rgb(255 255 255/.42);
+    --blue:#2f7bff; --violet:#7a4bff; --indigo:#5b3bff; --orange:#ff7a2f; --green:#25d366; --amber:#ffb02e; --red:#ff5a5f; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background:#0b0b0f; min-height:100vh; display:flex; gap:40px; justify-content:center; align-items:flex-start; flex-wrap:wrap; padding:32px 16px;
+    font-family:-apple-system,"SF Pro Display",system-ui,sans-serif; color:var(--text); }
+  figure { display:flex; flex-direction:column; align-items:center; gap:14px; max-width:390px; }
+  figcaption { color:var(--text2); font-size:14px; text-align:center; }
+  .phone { position:relative; width:390px; height:844px; border-radius:54px; background:var(--bg); overflow:hidden; isolation:isolate;
+    box-shadow:0 0 0 10px #17171c,0 0 0 11px #2b2b33,0 40px 80px -20px rgb(0 0 0/.8); }
+  .phone::before { content:""; position:absolute; width:340px; height:340px; border-radius:50%; background:var(--blue); filter:blur(70px); opacity:.45; top:-120px; left:-130px; z-index:-1; }
+  .phone::after { content:""; position:absolute; width:300px; height:300px; border-radius:50%; background:var(--orange); filter:blur(70px); opacity:.35; bottom:40px; right:-140px; z-index:-1; }
+  .island { position:absolute; top:11px; left:50%; width:120px; height:34px; margin-left:-60px; background:#000; border-radius:20px; }
+  .screen { position:absolute; inset:0; padding:62px 18px 110px; display:flex; flex-direction:column; gap:14px; overflow:hidden; }
+  h1 { font-size:30px; font-weight:800; letter-spacing:-.02em; }
+  .sub { color:var(--text2); font-size:14px; margin-top:-8px; }
+  .head { display:flex; justify-content:space-between; align-items:center; }
+  .plus { width:38px; height:38px; border-radius:50%; display:grid; place-items:center; font-size:22px; background:var(--glass); border:1px solid var(--line); }
+  .seg { display:flex; padding:3px; border-radius:14px; background:rgb(0 0 0/.35); border:1px solid var(--line); }
+  .seg span { flex:1; text-align:center; padding:9px 0; font-size:12.5px; font-weight:600; color:var(--text2); border-radius:11px; }
+  .seg span.on { color:#fff; background:linear-gradient(135deg,var(--blue),var(--indigo)); }
+  .card { padding:14px; border-radius:22px; background:var(--glass); border:1px solid var(--line); display:flex; flex-direction:column; gap:10px; }
+  .lbl { font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--text3); font-weight:700; }
+  .field { padding:13px 14px; border-radius:14px; background:rgb(0 0 0/.35); border:1px solid var(--line); font-size:15px; }
+  .hint { font-size:12px; color:var(--text3); }
+  .ico { width:48px; height:48px; border-radius:14px; flex:none; background:linear-gradient(135deg,rgb(47 123 255/.35),rgb(255 122 47/.25)); border:1px solid var(--line); display:grid; place-items:center; font-size:20px; }
+  .ico.wa { background:linear-gradient(135deg,#25d366,#128c4a); }
+  .ico.ig { background:linear-gradient(135deg,#7a4bff,#ff7a2f); }
+  .item { display:flex; align-items:center; gap:12px; }
+  .item b { font-size:16px; display:block; } .item small { color:var(--text2); font-size:12.5px; display:block; margin-top:2px; }
+  .item .end { margin-left:auto; color:var(--text3); font-size:14px; }
+  .chip { font-size:11px; font-weight:700; padding:3px 8px; border-radius:99px; background:rgb(37 211 102/.15); color:var(--green); border:1px solid rgb(37 211 102/.4); margin-left:6px; vertical-align:2px; }
+  .chip.warn { background:rgb(255 176 46/.14); color:var(--amber); border-color:rgb(255 176 46/.4); }
+  .btn { padding:8px 16px; border-radius:99px; font-size:14px; font-weight:700; background:linear-gradient(135deg,var(--blue),var(--indigo)); flex:none; }
+  .btn.ghost { background:var(--glass); border:1px solid var(--line); color:var(--text2); }
+  .bar { height:6px; border-radius:3px; background:rgb(255 255 255/.14); overflow:hidden; }
+  .bar i { display:block; height:100%; width:42%; background:linear-gradient(90deg,var(--blue),var(--orange)); }
+  .notes { font-size:12.5px; color:var(--text2); line-height:1.45; }
+  .cta { margin-top:2px; padding:17px; border-radius:20px; text-align:center; font-weight:700; font-size:17px; background:linear-gradient(90deg,var(--blue),var(--violet),var(--orange)); }
+  .tabbar { position:absolute; left:18px; right:18px; bottom:22px; height:64px; border-radius:32px; background:rgb(22 24 30/.72); border:1px solid var(--line);
+    display:flex; justify-content:space-around; align-items:center; font-size:11px; color:var(--text3); }
+  .tabbar .on { color:#fff; font-weight:700; }
+  .sheet { position:absolute; left:0; right:0; bottom:0; top:300px; background:#0d0e12; border-radius:28px 28px 0 0; border:1px solid var(--line); padding:10px 18px 0; display:flex; flex-direction:column; gap:12px; box-shadow:0 -20px 60px rgb(0 0 0/.6); }
+  .scrim { position:absolute; inset:0; background:rgb(0 0 0/.55); }
+  .grab { width:40px; height:5px; border-radius:3px; background:rgb(255 255 255/.3); margin:0 auto; }
+  .sheet h2 { font-size:22px; }
+  .sep { height:1px; background:var(--line); }
+</style>
+</head>
+<body>
+
+<figure>
+  <div class="phone"><div class="island"></div><div class="screen">
+    <div class="head"><h1>Importar</h1><span class="plus">+</span></div>
+    <div class="seg"><span>Certificado</span><span class="on">Fuentes</span></div>
+    <div class="card"><div class="item"><i class="ico">📦</i>
+      <span><b>Fouad's Source<span class="chip">Predeterminada</span></b><small>7 apps · source.fouadraheb.com</small></span><span class="end">›</span></div></div>
+    <div class="card"><div class="item"><i class="ico">🌐</i>
+      <span><b>Mi fuente</b><small>12 apps · ejemplo.com/repo.json</small></span><span class="end">›</span></div></div>
+    <p class="hint" style="text-align:center;margin-top:4px">Desliza una fuente para quitarla. La predeterminada se puede restaurar desde Ajustes.</p>
+  </div><div class="tabbar"><span class="on">Importar</span><span>Apps</span><span>Firmar</span><span>Ajustes</span></div></div>
+  <figcaption>1 · Tab «Certificado» renombrado a «Importar», con 2 segmentos: Certificado | Fuentes. Fouad's Source viene por defecto. Apps vuelve a tener sus 3 segmentos.</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="island"></div><div class="screen">
+    <div class="head"><h1>Fouad's Source</h1><span class="plus">⟳</span></div>
+    <p class="sub">‹ Fuentes · actualizada hoy 10:42</p>
+    <div class="field" style="color:var(--text3)">🔍 Buscar app</div>
+    <div class="card">
+      <div class="item"><i class="ico wa">W</i><span><b>Watusi</b><small>WhatsApp · v26.44.74 · 173 MB</small></span><span class="btn">Descargar</span></div>
+      <div class="sep"></div>
+      <div class="item"><i class="ico ig">I</i><span><b>Regram</b><small>Instagram · v330.0 · 210 MB</small></span><span class="btn">Descargar</span></div>
+      <div class="sep"></div>
+      <div class="item"><i class="ico">✓</i><span><b>Watusi Business</b><small>v2.24.9 · 142 MB</small></span><span class="btn ghost">Importada</span></div>
+    </div>
+    <p class="hint">Descargar guarda la IPA en Apps › Importadas. Luego la eliges en Firmar.</p>
+  </div><div class="tabbar"><span class="on">Importar</span><span>Apps</span><span>Firmar</span><span>Ajustes</span></div></div>
+  <figcaption>2 · Apps de la fuente: tamaño visible antes de bajar. Si ya la tienes, aparece «Importada».</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="island"></div><div class="screen">
+    <div class="head"><h1>Fouad's Source</h1><span class="plus">⟳</span></div>
+    <p class="sub">‹ Fuentes · actualizada hoy 10:42</p>
+    <div class="card">
+      <div class="item"><i class="ico wa">W</i><span><b>Watusi</b><small>73 de 173 MB · 42%</small></span><span class="btn ghost">Cancelar</span></div>
+      <div class="bar"><i></i></div>
+      <div class="sep"></div>
+      <div class="item"><i class="ico ig">I</i><span><b>Regram</b><small>210 MB</small></span><span class="btn">Descargar</span></div>
+    </div>
+    <div class="card"><span class="lbl">Qué cambia · v26.44.74</span>
+      <p class="notes">Online List vuelve. Corregida la restauración de backup. Hide Chats: notificaciones y estados de chats ocultos. Themes: Top Bar en iOS 26…</p>
+      <span class="chip warn" style="align-self:flex-start;margin:0">Usa el bundle original: borra WhatsApp antes</span></div>
+  </div><div class="tabbar"><span class="on">Importar</span><span>Apps</span><span>Firmar</span><span>Ajustes</span></div></div>
+  <figcaption>3 · Descargando: progreso, cancelar, notas de versión y aviso de la fuente.</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="island"></div><div class="screen">
+    <div class="head"><h1>Importar</h1></div>
+    <div class="seg"><span>Certificado</span><span class="on">Fuentes</span></div></div>
+    <div class="scrim"></div>
+    <div class="sheet"><i class="grab"></i>
+      <h2>Agregar fuente</h2>
+      <span class="lbl">URL del repositorio</span>
+      <div class="field">https://ejemplo.com/repo.json</div>
+      <p class="hint">Solo https. Formato AltStore / SideStore / Feather.</p>
+      <div class="card"><div class="item"><i class="ico">🌐</i><span><b>Mi fuente</b><small>12 apps · ejemplo.com</small></span><span class="chip" style="margin:0">Válida</span></div></div>
+      <div class="cta">Agregar</div>
+    </div>
+  </div>
+  <figcaption>4 · Botón «+»: pega la URL, vista previa del nombre y nº de apps antes de guardar.</figcaption>
+</figure>
+
+</body>
+</html>
