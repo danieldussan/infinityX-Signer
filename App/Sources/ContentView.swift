@@ -9,6 +9,7 @@ struct ContentView: View {
     @EnvironmentObject var toaster: Toaster
     @EnvironmentObject var imports: ImportStore
     @EnvironmentObject var log: AppLog
+    @EnvironmentObject var sources: SourceStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     // The batch state lives here so it survives tab switches (screens are re-created for the entrance animation).
     @StateObject private var batch = BatchViewModel()
@@ -17,7 +18,8 @@ struct ContentView: View {
 
     private var tabs: [TabItem] {
         [
-            TabItem(title: "Importar", systemImage: "square.and.arrow.down.fill"),
+            TabItem(title: "Importar", systemImage: "square.and.arrow.down.fill",
+                    badge: !sources.updatableApps(imported: Array(imports.ipaInfo.values)).isEmpty),
             TabItem(title: "Apps", systemImage: "square.stack.3d.up.fill"),
             TabItem(title: "Firmar", systemImage: "signature"),
             TabItem(title: "Ajustes", systemImage: "gearshape.fill", badge: updater.badgeVisible),
@@ -109,6 +111,15 @@ struct ContentView: View {
                 library?.markInstalled(fileName: app.ipaURL.lastPathComponent)
             }
             await updater.autoCheckIfNeeded()
+        }
+        .task {
+            for s in sources.sources { await sources.refresh(s) }
+            var seen = Set<String>()
+            let names = sources.updatableApps(imported: Array(imports.ipaInfo.values))
+                .map(\.name).filter { seen.insert($0).inserted }
+            guard !names.isEmpty else { return }
+            let list = names.prefix(2).joined(separator: ", ") + (names.count > 2 ? " y \(names.count - 2) más" : "")
+            toaster.show("Nueva versión de \(list) en Importar › Fuentes")
         }
         // The setter only runs on user dismissal (swipe / Listo); programmatic closes don't call it.
         .sheet(item: Binding(get: { coordinator.safariTarget },

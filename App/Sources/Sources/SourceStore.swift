@@ -1,4 +1,5 @@
 import Foundation
+import InfinityXCore
 
 // MARK: - Feed models (AltStore v1 + v2 tolerant)
 
@@ -198,6 +199,17 @@ final class SourceStore: ObservableObject {
     }
 
     func cancel(_ app: SourceApp) { tasks[app.id]?.cancel() }
+
+    /// A newer release than every imported copy of the same bundle id (never-imported apps get no update).
+    func hasUpdate(_ app: SourceApp, imported: [IPAInfo]) -> Bool {
+        let local = imported.filter { $0.bundleID == app.bundleID }
+        return !local.isEmpty && local.allSatisfy { isNewerVersion(remote: app.release.version, local: $0.version) }
+    }
+
+    /// Feed apps with an update for something already imported, across all sources.
+    func updatableApps(imported: [IPAInfo]) -> [SourceApp] {
+        feeds.values.flatMap(\.apps).filter { hasUpdate($0, imported: imported) }
+    }
 
     private func save() {
         if let data = try? JSONEncoder().encode(sources) { try? data.write(to: fileURL, options: .atomic) }

@@ -11,11 +11,11 @@ struct AboutCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 SectionLabel("Acerca de")
                 HStack(spacing: 14) {
-                    Text("X")
-                        .font(Theme.logoX)
-                        .foregroundColor(.white)
+                    Image("LogoX")
+                        .resizable().scaledToFill()
                         .frame(width: 52, height: 52)
-                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.black))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .accessibilityHidden(true)
                         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.line, lineWidth: 1))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(AppInfo.name).font(Theme.name).foregroundColor(Theme.text)
@@ -89,7 +89,7 @@ struct AboutCard: View {
     @ViewBuilder
     private var updateResult: some View {
         switch updater.state {
-        case .available(let version, let url, let notes):
+        case .available(let version, _, let notes):
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text("\(version) disponible").font(.system(size: 16, weight: .bold)).foregroundColor(Theme.text)
@@ -109,9 +109,9 @@ struct AboutCard: View {
                         }
                     }
                 }
-                Button { openURL(url) } label: { Text("Ver en GitHub") }
+                Button { openURL(AppInfo.webURL) } label: { Text("Abrir página web") }
                     .buttonStyle(CTAButtonStyle(height: 48))
-                Text("Lo más fácil: abre la web de Infinity X, firma la app con tu certificado e instálala desde Safari. También puedes descargar el .ipa de la release e importarlo en Apps › Importadas.")
+                Text("Abre la web de Infinity X, firma la app con tu certificado e instálala desde Safari. También puedes descargar el .ipa de la release en Versiones e importarlo en Apps › Importadas.")
                     .font(Theme.meta).foregroundColor(Theme.text3)
                     .fixedSize(horizontal: false, vertical: true)
             }

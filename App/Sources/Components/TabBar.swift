@@ -28,8 +28,8 @@ struct FloatingTabBar: View {
                             .offset(y: selected ? -1 : 0)
                             .overlay(alignment: .topTrailing) {
                                 if items[i].badge {
-                                    Circle().fill(Theme.orange).frame(width: 9, height: 9)
-                                        .shadow(color: Theme.orange, radius: 4)
+                                    Circle().fill(Theme.green).frame(width: 9, height: 9)
+                                        .shadow(color: Theme.green, radius: 4)
                                         .offset(x: 5, y: -2)
                                         .accessibilityLabel("Novedades")
                                 }

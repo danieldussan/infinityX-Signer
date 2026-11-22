@@ -169,11 +169,28 @@ struct SourcesView: View {
         } else if imported {
             Text("Importada").font(Theme.meta).foregroundColor(Theme.green)
         } else {
-            Button("Descargar") {
+            let update = hasUpdate(app)
+            Button {
                 store.download(app, into: imports) { toaster.show($0, isError: true) }
+            } label: {
+                Image(systemName: "arrow.down.to.line").font(.system(size: 15, weight: .bold))
             }
             .buttonStyle(SmallButtonStyle(kind: .primary))
+            .overlay(alignment: .topTrailing) {
+                if update {
+                    Text("Nueva")
+                        .font(.system(size: 9.5, weight: .heavy)).foregroundColor(.white)
+                        .padding(.horizontal, 5).padding(.vertical, 2)
+                        .background(Capsule().fill(Theme.red))
+                        .offset(x: 8, y: -7)
+                }
+            }
+            .accessibilityLabel(update ? "Descargar nueva versión" : "Descargar")
         }
+    }
+
+    private func hasUpdate(_ app: SourceApp) -> Bool {
+        store.hasUpdate(app, imported: Array(imports.ipaInfo.values))
     }
 
     private func meta(_ app: SourceApp) -> String {

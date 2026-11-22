@@ -63,13 +63,19 @@ final class AppLibrary: ObservableObject {
         }
     }
 
-    /// Adds the apps of a finished sign run, replacing records with the same bundle id or file name.
+    /// Adds the apps of a finished sign run. The bundle id decides: same bundle keeps only the latest
+    /// (installed or not), different bundles coexist whatever their names.
     func add(_ apps: [SignedApp], cert: CertSnapshot? = nil) {
         let now = Date()
         for app in apps {
             let name = app.ipaURL.lastPathComponent
             let size = (try? FileManager.default.attributesOfItem(atPath: app.ipaURL.path)[.size] as? NSNumber)?.int64Value ?? 0
-            records.removeAll { $0.ipaFileName == name || $0.bundleID == app.job.bundleID }
+            // The new IPA overwrote any file with this name, so a pending record of another bundle pointing at it is stale.
+            let replaced = records.filter { $0.bundleID == app.job.bundleID || ($0.installedAt == nil && $0.ipaFileName == name) }
+            records.removeAll { r in replaced.contains { $0.id == r.id } }
+            for old in replaced where old.ipaFileName != name && !records.contains(where: { $0.ipaFileName == old.ipaFileName }) {
+                try? FileManager.default.removeItem(at: old.ipaURL)
+            }
             records.append(AppRecord(id: UUID().uuidString, name: app.job.displayName, bundleID: app.job.bundleID,
                                      ipaFileName: name, sizeBytes: size, signedAt: now, installedAt: nil,
                                      version: app.version, cert: cert))
@@ -80,7 +86,7 @@ final class AppLibrary: ObservableObject {
 
     /// Called by the install coordinator when an item completes.
     func markInstalled(fileName: String) {
-        guard let i = records.firstIndex(where: { $0.ipaFileName == fileName }) else { return }
+        guard let i = records.firstIndex(where: { $0.ipaFileName == fileName && $0.installedAt == nil }) else { return }
         records[i].installedAt = Date()
         save()
     }
@@ -88,8 +94,10 @@ final class AppLibrary: ObservableObject {
     /// Deletes the record and its IPA file (used by trash in Firmadas and Quitar in Instaladas).
     /// ponytail: Quitar also deletes the file; nothing else in the UI could reach it afterwards.
     func remove(_ record: AppRecord) {
-        try? FileManager.default.removeItem(at: record.ipaURL)
         records.removeAll { $0.id == record.id }
+        if !records.contains(where: { $0.ipaFileName == record.ipaFileName }) {
+            try? FileManager.default.removeItem(at: record.ipaURL)
+        }
         save()
         ExpiryAlerts.reschedule(for: records)
     }

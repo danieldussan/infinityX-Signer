@@ -86,17 +86,16 @@ final class UpdateChecker: ObservableObject {
         }
     }
 
-    /// At most once per 24 h; failures are silent. Within the window only the cached result is shown.
+    /// Once per launch; failures are silent (the cached result is shown if there is one).
     func autoCheckIfNeeded() async {
         guard !autoStarted else { return }
         autoStarted = true
         // Small delay so the banner slides in after the first frame.
         try? await Task.sleep(nanoseconds: 900_000_000)
-        if let last = lastChecked, Date().timeIntervalSince(last) < 24 * 3600 {
+        guard let found = try? await fetch() else {
             if let cached = loadCache() { state = cached }
             return
         }
-        guard let found = try? await fetch() else { return }
         if case .checking = state { return }
         state = found
         stamp()
